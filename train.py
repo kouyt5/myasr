@@ -58,7 +58,7 @@ labels_path = "./data/labels.txt"
 model = MyModel()
 
 dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
-dev_dataloader = MyAudioLoader(dev_datasets, batch_size=8, drop_last=False)
+dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=False)
 train_datasets = MyAudioDataset(train_manifest_path, labels_path)
 train_dataloader = MyAudioLoader(train_datasets, batch_size=8, drop_last=True)
 criterion = nn.CTCLoss(blank=0, reduction="mean")
