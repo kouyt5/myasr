@@ -1,5 +1,7 @@
 /data/LibriSpeech
 *.wav
+*.gz
+*.json
 /checkpoint
 /.vscode
 __pycache__

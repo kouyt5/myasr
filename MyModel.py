@@ -2,27 +2,36 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 import math
+class SeprationConv(nn.Module):
+    def __init__(self):
+        super(SeprationConv).__init__()
 
+
+    def forward(self, input):
+        pass
 class MyModel(nn.Module):
     def __init__(self):
         super(MyModel, self).__init__()
         self.cnn = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=(4, 22), stride=(1, 1),
-                padding=(2, 10)),
+            nn.Conv2d(1, 32, kernel_size=(8, 12), stride=(1, 1),
+                padding=(4, 6)),
             nn.BatchNorm2d(32),
             nn.ReLU(),
-            nn.Conv2d(32,64,(2,11),(1,1),(1,4)),
+            nn.Conv2d(32, 64, (4, 8), (1, 1), (2,4)),
             nn.BatchNorm2d(64),
             nn.ReLU(),
         )
         self.maskcnn = MaskCNN()
-        x = math.ceil((float)(64-4+1+2*2))
-        x = math.ceil((float)(x-2+1+1*2))
+        x = math.ceil((float)(64-8+1+4*2))
+        x = math.ceil((float)(x-4+1+2*2))
         self.rnn = nn.Sequential(
-            nn.LSTM(64*x,256,num_layers=1,batch_first=True,bidirectional=True),
+            nn.LSTM(64*x,512,num_layers=1,batch_first=True,bidirectional=True),
         )
-        self.bn1 = nn.BatchNorm1d(512)
-        self.fc = nn.Linear(512,29)
+        self.rnn2 = nn.Sequential(
+            nn.LSTM(1024,256,num_layers=1,batch_first=True,bidirectional=True),
+        )
+        self.bn1 = nn.BatchNorm1d(1024)
+        self.fc = nn.Linear(1024,29)
 
     def forward(self, input, percents):
         x = self.cnn(input) # N*32*F*T
@@ -31,6 +40,7 @@ class MyModel(nn.Module):
         x = nn.utils.rnn.pack_padded_sequence(x, enforce_sorted=False, \
             lengths=torch.mul(x.size(1),percents).int(),batch_first=True)
         x, h = self.rnn(x)
+        # x, h = self.rnn2(x)
         x, _ = nn.utils.rnn.pad_packed_sequence(x,batch_first=True) # N*T*C
         x = x.transpose(1,2) # N*C*T
         x = self.bn1(x)
