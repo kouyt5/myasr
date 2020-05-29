@@ -68,10 +68,10 @@ if torch.cuda.is_available():
     map_location = 'cuda:0'
 else:
     map_location = 'cpu'
-model = torch.load('checkpoint/0.pth')
+# model = torch.load('checkpoint/0.pth')
 # evalute(model, dev_dataloader, device)
 for epoch in range(150):
-    torch.save(model, "checkpoint/"+str(epoch)+".pth")
+#     torch.save(model, "checkpoint/"+str(epoch)+".pth")
     total_cer = 0
     total_wer = 0
     total_count = 0
