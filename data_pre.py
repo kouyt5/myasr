@@ -92,7 +92,7 @@ def __process_data(data_folder: str, dst_folder: str, manifest_file: str):
 
 def main():
     data_root = "./data/"
-    data_sets = "dev-clean"
+    data_sets = "train-clean-100"
     if data_sets == "ALL":
         data_sets = "dev_clean,dev_other,train_clean_100,train_clean_360,train_other_500,test_clean,test_other"
 

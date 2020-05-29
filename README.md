@@ -18,18 +18,8 @@
 
 ## 坑
 + 数据预处理时没有对语音特征取对数，造成特征值过小模型无法训练
-## v1
-epoch35:avg cer=0.328
-epoch26avg cer=0.315
-epoch27avg cer=0.302
-epoch28avg cer=0.288
-epoch29avg cer=0.279
-epoch30avg cer:0.264
-epoch31avg cer=0.248
-epoch32avg cer:0.233
-epoch33avg cer=0.219
-epoch35avg cer=0.202
-epoch36avg cer=0.192
-epoch37avg cer=0.180
-epoch38avg cer=0.172
-epoch39avg cer=0.159
+## docker启动
+
+```
+docker run -it --rm -v /home/chenc/workspace/myasr:/home/chenc/workspace/myasr --gpus all pytorch/pytorch:1.4-cuda10.1-cudnn7-runtime
+```
