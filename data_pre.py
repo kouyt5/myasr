@@ -11,8 +11,8 @@ from sox import Transformer
 from tqdm import tqdm
 
 URLS = {
-
-    'DEV_CLEAN': "http://www.openslr.org/resources/12/dev-clean.tar.gz",
+    'TRAIN-CLEAN-100': ("http://www.openslr.org/resources/12/train-clean-100.tar.gz"),
+    'DEV-CLEAN': "http://www.openslr.org/resources/12/dev-clean.tar.gz",
 }
 logging.basicConfig()
 
@@ -92,15 +92,15 @@ def __process_data(data_folder: str, dst_folder: str, manifest_file: str):
 
 def main():
     data_root = "./data/"
-    data_sets = "dev-clean"
+    data_sets = "dev-clean,train-clean-100"
     if data_sets == "ALL":
         data_sets = "dev_clean,dev_other,train_clean_100,train_clean_360,train_other_500,test_clean,test_other"
 
     for data_set in data_sets.split(','):
         logging.info("\n\nWorking on: {0}".format(data_set))
         filepath = os.path.join(data_root, data_set + ".tar.gz")
-        # logging.info("Getting {0}".format(data_set))
-        # __maybe_download_file(filepath, data_set.upper())
+        logging.info("Getting {0}".format(data_set))
+        __maybe_download_file(filepath, data_set.upper())
         logging.info("Extracting {0}".format(data_set))
         __extract_file(filepath, data_root)
         logging.info("Processing {0}".format(data_set))
