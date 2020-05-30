@@ -119,5 +119,5 @@ for epoch in range(150):
                 format(wer, '0.2f'), format(cer, '0.2f')))
             print(ground_trues[0])
             print(trans_pre[0][0][0])
-    torch.save(model, "checkpoint/"+str(epoch)+".pth")
+            torch.save(model, "checkpoint/"+str(epoch)+".pth")
     evalute(model, dev_dataloader, device)
