@@ -5,6 +5,7 @@ import torch.nn as nn
 from decoder import GreedyDecoder
 from tqdm import tqdm
 from ASR_metrics import utils as metrics
+from apex import amp
 
 
 def evalute(model, loader, device):
@@ -60,9 +61,10 @@ model = MyModel()
 dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
 dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=False)
 train_datasets = MyAudioDataset(train_manifest_path, labels_path)
-train_dataloader = MyAudioLoader(train_datasets, batch_size=32, drop_last=True)
+train_dataloader = MyAudioLoader(train_datasets, batch_size=8, drop_last=True)
 criterion = nn.CTCLoss(blank=0, reduction="mean")
-optim = torch.optim.SGD(model.parameters(), lr=0.005, momentum=0.9)
+# optim = torch.optim.SGD(model.parameters(), lr=0.005, momentum=0.9)
+optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5)
 decoder = GreedyDecoder(labels_path)
 if torch.cuda.is_available():
     map_location = 'cuda:0'
@@ -70,15 +72,23 @@ else:
     map_location = 'cpu'
 # model = torch.load('checkpoint/0.pth')
 # evalute(model, dev_dataloader, device)
+
+# apex
+model.to(device=device)
+opt_level = 'O1'
+model, optim = amp.initialize(model, optim, opt_level=opt_level)
+checkpoint = torch.load('checkpoint/0.pt')
+model.load_state_dict(checkpoint['model'])
+optim.load_state_dict(checkpoint['optimizer'])
+amp.load_state_dict(checkpoint['amp'])
 for epoch in range(150):
-    torch.save(model, "checkpoint/"+str(epoch)+".pth")
+    # torch.save(model, "checkpoint/"+str(epoch)+".pt")
     total_cer = 0
     total_wer = 0
     total_count = 0
     model.train()
     for (i, batch) in tqdm(enumerate(train_dataloader), total=len(train_dataloader)):
         optim.zero_grad()
-        model.to(device=device)
         input = batch[0]
         percents = batch[2]
         trans = batch[1]
@@ -87,7 +97,9 @@ for epoch in range(150):
         t_lengths = torch.mul(out.size(1), percents).int()  # 输出实际长度
         loss = criterion(out.transpose(0, 1).requires_grad_(),
                          trans, t_lengths, trans_lengths)
-        loss.backward()
+        # loss.backward()
+        with amp.scale_loss(loss, optim) as scaled_loss:
+            scaled_loss.backward()
         optim.step()
         trans_pre = decoder.decode(out)
         # print(trans_pre[0][0][0])
@@ -119,5 +131,11 @@ for epoch in range(150):
                 format(wer, '0.2f'), format(cer, '0.2f')))
             print(ground_trues[0])
             print(trans_pre[0][0][0])
-    torch.save(model, "checkpoint/"+str(epoch)+".pth")
+    # torch.save(model, "checkpoint/"+str(epoch)+".pth")
+            checkpoint = {
+                'model': model.state_dict(),
+                'optimizer': optim.state_dict(),
+                'amp': amp.state_dict()
+            }
+            torch.save(checkpoint, 'checkpoint/{}.pt'.format(epoch))
     evalute(model, dev_dataloader, device)
