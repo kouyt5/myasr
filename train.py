@@ -21,7 +21,7 @@ def evalute(model, loader, device):
         trans_lengths = batch[3]
         out = model(input.to(device), percents.to(device))
         t_lengths = torch.mul(out.size(1), percents).int()  # 输出实际长度
-        loss = criterion(out.transpose(0, 1).requires_grad_(),
+        loss = criterion(out.transpose(0, 1),
                          trans, t_lengths, trans_lengths)
         trans_pre = decoder.decode(out)  # 预测文本
         ground_trues = []  # 实际文本
