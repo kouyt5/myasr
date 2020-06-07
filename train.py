@@ -135,6 +135,7 @@ for epoch in range(29, 150):
                 format(wer, '0.2f'), format(cer, '0.2f')))
             print(ground_trues[0])
             print(trans_pre[0][0][0])
+<<<<<<< HEAD
     # torch.save(model, "checkpoint/"+str(epoch)+".pth")
             checkpoint = {
                 'model': model.state_dict(),
@@ -142,4 +143,7 @@ for epoch in range(29, 150):
                 'amp': amp.state_dict()
             }
             torch.save(checkpoint, 'checkpoint/{}.pt'.format(epoch))
+=======
+            torch.save(model, "checkpoint/"+str(epoch)+".pth")
+>>>>>>> ad93bc6f5c4d1dd27fbd1c065d7d94910bbead6a
     evalute(model, dev_dataloader, device)
