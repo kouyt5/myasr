@@ -63,10 +63,10 @@ model = MyModel()
 dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
 dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=False)
 train_datasets = MyAudioDataset(train_manifest_path, labels_path)
-train_dataloader = MyAudioLoader(train_datasets, batch_size=8, drop_last=True)
+train_dataloader = MyAudioLoader(train_datasets, batch_size=4, drop_last=True)
 criterion = nn.CTCLoss(blank=0, reduction="mean")
-optim = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
-# optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5)
+optim = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, nesterov=True)
+# optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5, amsgrad=True)
 decoder = GreedyDecoder(labels_path)
 if torch.cuda.is_available():
     map_location = 'cuda:0'
@@ -79,12 +79,12 @@ else:
 model.to(device=device)
 opt_level = 'O1'
 model, optim = amp.initialize(model, optim, opt_level=opt_level)
-checkpoint = torch.load('checkpoint/29.pt')
-model.load_state_dict(checkpoint['model'])
-optim.load_state_dict(checkpoint['optimizer'])
-amp.load_state_dict(checkpoint['amp'])
-evalute(model, dev_dataloader, device)
-for epoch in range(29, 150):
+# checkpoint = torch.load('checkpoint/8.pt')
+# model.load_state_dict(checkpoint['model'])
+# optim.load_state_dict(checkpoint['optimizer'])
+# amp.load_state_dict(checkpoint['amp'])
+# evalute(model, dev_dataloader, device)
+for epoch in range(0, 150):
     # torch.save(model, "checkpoint/"+str(epoch)+".pt")
     total_cer = 0
     total_wer = 0
@@ -135,7 +135,6 @@ for epoch in range(29, 150):
                 format(wer, '0.2f'), format(cer, '0.2f')))
             print(ground_trues[0])
             print(trans_pre[0][0][0])
-<<<<<<< HEAD
     # torch.save(model, "checkpoint/"+str(epoch)+".pth")
             checkpoint = {
                 'model': model.state_dict(),
@@ -143,7 +142,4 @@ for epoch in range(29, 150):
                 'amp': amp.state_dict()
             }
             torch.save(checkpoint, 'checkpoint/{}.pt'.format(epoch))
-=======
-            torch.save(model, "checkpoint/"+str(epoch)+".pth")
->>>>>>> ad93bc6f5c4d1dd27fbd1c065d7d94910bbead6a
-    evalute(model, dev_dataloader, device)
+    # evalute(model, dev_dataloader, device)
