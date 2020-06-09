@@ -127,3 +127,8 @@ eval loss: 0.8432261347770691
 eval avg cer:0.3141713566294957
 eval avg wer:0.6887609702796487
 eval wer: 0.62 cer: 0.26
+epoch13
+eval loss: 0.7768691778182983
+eval avg cer:0.2933178275210534
+eval avg wer:0.681502759749911
+eval wer: 0.67 cer: 0.28
