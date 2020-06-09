@@ -5,57 +5,58 @@ import math
 
 
 class SeprationConv(nn.Module):
-    def __init__(self, in_ch, out_ch, k=(1,33),last=False):
+    def __init__(self, in_ch, out_ch, k=33,last=False):
         super(SeprationConv,self).__init__()
         self.last = last
-        self.depthwise_conv = nn.Conv2d(in_ch, in_ch, kernel_size=k, stride=(1, 1),
-                      padding=(k[0]//2, k[1]//2), groups=in_ch)
-        self.pointwise_conv = nn.Conv2d(in_ch, out_ch, kernel_size=(1, 1), stride=(1, 1))
-        self.bn = nn.BatchNorm2d(out_ch)
+        self.depthwise_conv = nn.Conv1d(in_ch, in_ch, kernel_size=k, stride=1,
+                      padding= k // 2, groups=in_ch)
+        self.pointwise_conv = nn.Conv1d(in_ch, out_ch, kernel_size=1, stride=1)
+        self.bn = nn.BatchNorm1d(out_ch)
         self.relu = nn.ReLU()
-        # self.maskcnn = MaskCNN()
-    def forward(self, input):
+        self.maskcnn = MaskCNN()
+    def forward(self, input, percents):
         x = self.depthwise_conv(input)
         x = self.channel_shuffle(x, groups=4)
         x = self.pointwise_conv(x)
-        # x = self.maskcnn(x)
+        x = self.maskcnn(x,percents)
         x = self.bn(x)
         if not self.last:
             x= self.relu(x)
         return x
 
     def channel_shuffle(self, x, groups):
-        batchsize, num_channels, f, time = x.data.size()
+        batchsize, num_channels, time = x.data.size()
         channels_per_group = num_channels // groups
         if not channels_per_group * groups == num_channels:
             raise "group数和通道数不匹配，请保证group能够被num_channels整除"
         # reshape
         x = x.view(batchsize, groups,
-               channels_per_group, f, time)
+               channels_per_group, time)
         x = torch.transpose(x, 1, 2).contiguous()
         # flatten
-        x = x.view(batchsize, -1, f, time)
+        x = x.view(batchsize, -1, time)
         return x
 
 class QuartNetBlock(nn.Module):
-    def __init__(self, repeat=3,in_ch=1,out_ch=32,k=(1,33)):
+    def __init__(self, repeat=3,in_ch=1,out_ch=32,k=33):
         super(QuartNetBlock, self).__init__()
         seq = []
         for i in range(0,repeat-1):
             sep = SeprationConv(in_ch,in_ch,k)
             seq.append(sep)
         self.reside = nn.Sequential(
-            nn.Conv2d(in_ch,out_ch,kernel_size=(1,1)),
-            nn.BatchNorm2d(out_ch),
+            nn.Conv1d(in_ch,out_ch,kernel_size=1),
+            nn.BatchNorm1d(out_ch),
         )
         last_sep = SeprationConv(in_ch,out_ch,k=k,last=True)
         seq.append(last_sep)
-        self.seq = nn.Sequential(*seq)
+        self.seq = nn.ModuleList(seq)
         self.last_relu = nn.ReLU()
 
-    def forward(self, x):
+    def forward(self, x, percents):
         start = x
-        x = self.seq(x)
+        for m in self.seq:
+            x = m(x, percents)
         res_out = self.reside(start)
         x = x + res_out
         x = self.last_relu(x)
@@ -65,19 +66,45 @@ class QuartNet(nn.Module):
     def __init__(self):
         super(QuartNet,self).__init__()
         self.first_cnn = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=(1, 33), stride=(1, 1),
-                      padding=(0, 16)),
-            nn.BatchNorm2d(32),
+            nn.Conv1d(64, 256, kernel_size= 33, stride=2,
+                      padding=16),
+            nn.BatchNorm1d(256),
             nn.ReLU(),
         )
-        self.block1 = QuartNetBlock(repeat=3,in_ch=32,out_ch=128,k=(1,33))
-        self.block2 = QuartNetBlock(repeat=3,in_ch=128,out_ch=128,k=(1,39))
-        self.block3 = QuartNetBlock(repeat=3,in_ch=128,out_ch=128,k=(1,51))
-    def forward(self, input):
-        x = self.first_cnn(input)
-        x = self.block1(x)
-        x = self.block2(x)
-        x = self.block3(x)
+        self.block1 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=33)
+        self.block2 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=39)
+        self.block3 = QuartNetBlock(repeat=5,in_ch=256,out_ch=512,k=51)
+        self.block4 = QuartNetBlock(repeat=5,in_ch=512,out_ch=512,k=63)
+        self.block5 = QuartNetBlock(repeat=5,in_ch=512,out_ch=512,k=75)
+
+        self.last_cnn = nn.Sequential(
+            nn.Conv1d(512, 512, kernel_size= 87, stride=1,
+                      padding=87//2),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+        )
+        self.last_cnn2 = nn.Sequential(
+            nn.Conv1d(512, 1024, kernel_size= 1, stride=1),
+            nn.BatchNorm1d(1024),
+            nn.ReLU(),
+        )
+        self.last_cnn3 = nn.Sequential(
+            nn.Conv1d(1024, 29, kernel_size=1, stride=1),
+            nn.BatchNorm1d(29),
+            nn.ReLU(),
+        )
+    def forward(self, input, percents):
+        # x = input.view(input.size(0),input.size(2),input.size(3))
+        x = input.squeeze(dim=1).contiguous()
+        x = self.first_cnn(x)
+        x = self.block1(x,percents)
+        x = self.block2(x,percents)
+        x = self.block3(x,percents)
+        x = self.block4(x,percents)
+        x = self.block5(x,percents)
+        x = self.last_cnn(x)
+        x = self.last_cnn2(x)
+        x = self.last_cnn3(x)
         return x
 class BatchLSTM(nn.Module):
     def __init__(self,in_ch=64,out_ch=512,\
@@ -97,36 +124,16 @@ class BatchLSTM(nn.Module):
 class MyModel(nn.Module):
     def __init__(self):
         super(MyModel, self).__init__()
-        # self.cnn = nn.Sequential(
-        #     nn.Conv2d(1, 32, kernel_size=(8, 12), stride=(1, 1),
-        #               padding=(4, 6)),
-        #     nn.BatchNorm2d(32),
-        #     nn.ReLU(),
-        #     nn.Conv2d(32, 64, (4, 8), (1, 1), (2, 4)),
-        #     nn.BatchNorm2d(64),
-        #     nn.ReLU(),
-        # )
         # self.maskcnn = MaskCNN()
         self.cnn = QuartNet()
-        # x = math.ceil((float)(64-8+1+4*2))
-        # x = math.ceil((float)(x-4+1+2*2))
-        # self.rnn = nn.Sequential(
-        #     nn.LSTM(64*x, 512, num_layers=1,
-        #             batch_first=True, bidirectional=True),
-        # )
         self.rnn = BatchLSTM(64*128,128,True,True)
         self.bn1 = nn.BatchNorm1d(256)
         self.fc = nn.Linear(256, 29)
 
     def forward(self, input, percents):
-        x = self.cnn(input)  # N*32*F*T
+        x = self.cnn(input,percents)  # N*32*F*T
         # x = self.maskcnn(x, percents)
         x = x.view(x.size(0), x.size(1)*x.size(2), -1).transpose(1, 2).contiguous()
-        # x = nn.utils.rnn.pack_padded_sequence(x, enforce_sorted=False,
-        #                                       lengths=torch.mul(x.size(1), percents).int(), batch_first=True)
-        # x, h = self.rnn(x)
-        # # x, h = self.rnn2(x)
-        # x, _ = nn.utils.rnn.pad_packed_sequence(x, batch_first=True)  # N*T*C
         lengths=torch.mul(x.size(1), percents).int()
         x = self.rnn(x, lengths)
         x = x.transpose(1, 2)  # N*C*T
@@ -134,9 +141,29 @@ class MyModel(nn.Module):
         x = self.fc(x.transpose(1, 2))  # N*T*class
         x = nn.functional.log_softmax(x, dim=-1)
         return x
+class MyModel2(nn.Module):
+    def __init__(self):
+        super(MyModel2, self).__init__()
+        # self.maskcnn = MaskCNN()
+        self.cnn = QuartNet()
+        # self.rnn = BatchLSTM(64*128,128,True,True)
+        # self.bn1 = nn.BatchNorm1d(256)
+        # self.fc = nn.Linear(256, 29)
+
+    def forward(self, input, percents):
+        x = self.cnn(input,percents)  # N*C*T
+        # x = self.maskcnn(x, percents)
+        # x = x.view(x.size(0), x.size(1)*x.size(2), -1).transpose(1, 2).contiguous()
+        # lengths=torch.mul(x.size(1), percents).int()
+        # x = self.rnn(x, lengths)
+        x = x.transpose(1, 2)  # N*T*C
+        # x = self.bn1(x)
+        # x = self.fc(x)  # N*T*class
+        x = nn.functional.log_softmax(x, dim=-1)
+        return x
 
 
-class MaskCNN(nn.Module):
+class MaskCNN1(nn.Module):
     def forward(self, x, percents):
         lengths = torch.mul(x.size(3), percents).int()
         mask = torch.BoolTensor(x.size()).fill_(0)
@@ -149,11 +176,23 @@ class MaskCNN(nn.Module):
                     2, length, mask[i].size(2) - length).fill_(1)
         x = x.masked_fill(mask, 0)
         return x
-
+class MaskCNN(nn.Module):
+    def forward(self, x, percents):
+        lengths = torch.mul(x.size(2), percents).int()
+        mask = torch.BoolTensor(x.size()).fill_(0)
+        if x.is_cuda:
+            mask = mask.cuda()
+        for i, length in enumerate(lengths):
+            length = length.item()
+            if (mask[i].size(1) - length) > 0:
+                mask[i].narrow(
+                    1, length, mask[i].size(1) - length).fill_(1)
+        x = x.masked_fill(mask, 0)
+        return x
 
 if __name__ == "__main__":
     input = torch.rand([8, 1, 64, 128], dtype=torch.float32)
     percents = torch.rand([8], dtype=torch.float32)
-    model = MyModel()
+    model = MyModel2()
     out = model(input, percents)
-    print("hh")
+    print(out.size())

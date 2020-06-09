@@ -1,5 +1,5 @@
 import torch
-from MyModel import MyModel
+from MyModel import MyModel, MyModel2
 from data_loader import MyAudioLoader, MyAudioDataset
 import torch.nn as nn
 from decoder import GreedyDecoder
@@ -58,14 +58,14 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dev_manifest_path = "./data/dev-clean.json"
 train_manifest_path = "./data/train-clean-100.json"
 labels_path = "./data/labels.txt"
-model = MyModel()
+model = MyModel2()
 
 dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
-dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=False)
-train_datasets = MyAudioDataset(train_manifest_path, labels_path)
-train_dataloader = MyAudioLoader(train_datasets, batch_size=4, drop_last=True)
+dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=True,shuffle=True)
+train_datasets = MyAudioDataset(train_manifest_path, labels_path,max_duration=16)
+train_dataloader = MyAudioLoader(train_datasets, batch_size=16, drop_last=True,shuffle=True)
 criterion = nn.CTCLoss(blank=0, reduction="mean")
-optim = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, nesterov=True)
+optim = torch.optim.SGD(model.parameters(), lr=0.05, momentum=0.9, nesterov=True)
 # optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5, amsgrad=True)
 decoder = GreedyDecoder(labels_path)
 if torch.cuda.is_available():
@@ -79,12 +79,12 @@ else:
 model.to(device=device)
 opt_level = 'O1'
 model, optim = amp.initialize(model, optim, opt_level=opt_level)
-# checkpoint = torch.load('checkpoint/8.pt')
-# model.load_state_dict(checkpoint['model'])
-# optim.load_state_dict(checkpoint['optimizer'])
-# amp.load_state_dict(checkpoint['amp'])
-# evalute(model, dev_dataloader, device)
-for epoch in range(0, 150):
+checkpoint = torch.load('checkpoint/12.pt')
+model.load_state_dict(checkpoint['model'])
+optim.load_state_dict(checkpoint['optimizer'])
+amp.load_state_dict(checkpoint['amp'])
+evalute(model, dev_dataloader, device)
+for epoch in range(12, 150):
     # torch.save(model, "checkpoint/"+str(epoch)+".pt")
     total_cer = 0
     total_wer = 0
@@ -97,7 +97,7 @@ for epoch in range(0, 150):
         trans_lengths = batch[3]
         out = model(input.to(device), percents.to(device))
         t_lengths = torch.mul(out.size(1), percents).int()  # 输出实际长度
-        loss = criterion(out.transpose(0, 1).requires_grad_(),
+        loss = criterion(out.transpose(0, 1),
                          trans, t_lengths, trans_lengths)
         optim.zero_grad()
         with amp.scale_loss(loss, optim) as scaled_loss:
@@ -142,4 +142,4 @@ for epoch in range(0, 150):
                 'amp': amp.state_dict()
             }
             torch.save(checkpoint, 'checkpoint/{}.pt'.format(epoch))
-    # evalute(model, dev_dataloader, device)
+    evalute(model, dev_dataloader, device)
