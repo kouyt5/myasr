@@ -11,9 +11,10 @@ from apex import amp
 def evalute(model, loader, device):
     model.eval()
     model.to(device=device)
-    total_cer = 0
-    total_wer = 0
+    cer_list_pairs = []
+    wer_list_pairs = []
     total_count = 0
+    total_loss = .0
     print("eval...")
     for (i, batch) in tqdm(enumerate(loader)):
         input = batch[0]
@@ -32,26 +33,22 @@ def evalute(model, loader, device):
             trans_list = trans.narrow(0, start, add).numpy().tolist()
             start += add
             ground_trues.append(decoder.decoder_by_number(trans_list))
-        cer_list_pairs = [(ground_trues[i].replace(' ', ''), trans_pre[0][i][0].replace(' ', ''))
-                          for i in range(len(trans_lengths))]
-        wer_list_pairs = [(ground_trues[i], trans_pre[0][i][0])
-                          for i in range(len(trans_lengths))]
-        try:
-            wer = metrics.compute_wer_list_pair(wer_list_pairs)
-            cer = metrics.calculate_cer_list_pair(cer_list_pairs)
-        except ZeroDivisionError:
-            print('ZeroDivisionError')
-            continue
-        total_cer += cer
-        total_wer += wer
+        cer_list_pairs.extend([(ground_trues[i].replace(' ', ''), trans_pre[0][i][0].replace(' ', ''))
+                          for i in range(len(trans_lengths))])
+        wer_list_pairs.extend([(ground_trues[i], trans_pre[0][i][0])
+                          for i in range(len(trans_lengths))])
         total_count += 1
-        # print(ground_trues[0])
-        # print(trans_pre[0][0][0])
-    print("eval loss: "+str(loss.item()))
-    print("eval avg cer:{}".format(total_cer/total_count))
-    print("eval avg wer:{}".format(total_wer/total_count))
-    print("eval wer: {} cer: {}".format(
-        format(wer, '0.2f'), format(cer, '0.2f')))
+        total_loss += loss.item()
+    try:
+        wer = metrics.compute_wer_list_pair(wer_list_pairs)
+        cer = metrics.calculate_cer_list_pair(cer_list_pairs)
+    except ZeroDivisionError:
+        print('ZeroDivisionError')
+    print("eval avg loss: "+str(total_loss/total_count))
+    print("eval avg cer:{}".format(cer, '0.2f'))
+    print("eval avg wer:{}".format(wer, '0.2f'))
+    print("trues: "+ground_trues[0])
+    print("preds: "+trans_pre[0][0][0])
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -65,7 +62,7 @@ dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=True,shuffl
 train_datasets = MyAudioDataset(train_manifest_path, labels_path,max_duration=16)
 train_dataloader = MyAudioLoader(train_datasets, batch_size=16, drop_last=True,shuffle=True)
 criterion = nn.CTCLoss(blank=0, reduction="mean")
-optim = torch.optim.SGD(model.parameters(), lr=0.05, momentum=0.9, nesterov=True)
+optim = torch.optim.SGD(model.parameters(), lr=0.05, momentum=0.9, nesterov=True,weight_decay=1e-4)
 # optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5, amsgrad=True)
 decoder = GreedyDecoder(labels_path)
 if torch.cuda.is_available():
@@ -79,18 +76,20 @@ else:
 model.to(device=device)
 opt_level = 'O1'
 model, optim = amp.initialize(model, optim, opt_level=opt_level)
-checkpoint = torch.load('checkpoint/12.pt')
+checkpoint = torch.load('checkpoint/17.pt')
 model.load_state_dict(checkpoint['model'])
 optim.load_state_dict(checkpoint['optimizer'])
 amp.load_state_dict(checkpoint['amp'])
 evalute(model, dev_dataloader, device)
-for epoch in range(12, 150):
+for epoch in range(18, 150):
     # torch.save(model, "checkpoint/"+str(epoch)+".pt")
-    total_cer = 0
-    total_wer = 0
+    cer_list_pairs = []
+    wer_list_pairs = []
     total_count = 0
+    total_loss = 0
     model.train()
     for (i, batch) in tqdm(enumerate(train_dataloader), total=len(train_dataloader)):
+        total_count +=1
         input = batch[0]
         percents = batch[2]
         trans = batch[1]
@@ -114,27 +113,23 @@ for epoch in range(12, 150):
             ground_trues.append(decoder.decoder_by_number(trans_list))
         # true = trans.narrow(0,0,trans_lengths[0].int()).int().numpy().tolist()
         # print(ground_trues[0])
-        cer_list_pairs = [(ground_trues[i].replace(' ', ''), trans_pre[0][i][0].replace(' ', ''))
-                          for i in range(len(trans_lengths))]
-        wer_list_pairs = [(ground_trues[i], trans_pre[0][i][0])
-                          for i in range(len(trans_lengths))]
-        try:
-            wer = metrics.compute_wer_list_pair(wer_list_pairs)
-            cer = metrics.calculate_cer_list_pair(cer_list_pairs)
-        except ZeroDivisionError:
-            print('ZeroDivisionError')
-            continue
-        total_cer += cer
-        total_wer += wer
-        total_count += 1
+        cer_list_pairs.extend([(ground_trues[i].replace(' ', ''), trans_pre[0][i][0].replace(' ', ''))
+                          for i in range(len(trans_lengths))])
+        wer_list_pairs.extend([(ground_trues[i], trans_pre[0][i][0])
+                          for i in range(len(trans_lengths))])
+        total_loss += loss.item()
         if total_count % 50 == 0:
-            print("epoch"+str(epoch) + " loss: "+str(loss.item()))
-            print("avg cer:{}".format(total_cer/total_count))
-            print("avg wer:{}".format(total_wer/total_count))
-            print("wer: {} cer: {}".format(
-                format(wer, '0.2f'), format(cer, '0.2f')))
-            print(ground_trues[0])
-            print(trans_pre[0][0][0])
+            try:
+                wer = metrics.compute_wer_list_pair(wer_list_pairs)
+                cer = metrics.calculate_cer_list_pair(cer_list_pairs)
+            except ZeroDivisionError:
+                print('ZeroDivisionError')
+                continue
+            print("epoch"+str(epoch) + "avg loss: "+str(total_loss/total_count))
+            print("avg cer:{}".format(cer, '0.2f'))
+            print("avg wer:{}".format(wer, '0.2f'))
+            print("trues: "+ground_trues[0])
+            print("preds: "+trans_pre[0][0][0])
     # torch.save(model, "checkpoint/"+str(epoch)+".pth")
             checkpoint = {
                 'model': model.state_dict(),
