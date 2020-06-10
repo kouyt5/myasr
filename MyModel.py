@@ -16,8 +16,8 @@ class SeprationConv(nn.Module):
         self.maskcnn = MaskCNN()
     def forward(self, input, percents):
         x = self.depthwise_conv(input)
-        x = self.channel_shuffle(x, groups=4)
         x = self.pointwise_conv(x)
+        x = self.channel_shuffle(x, groups=4)
         x = self.maskcnn(x,percents)
         x = self.bn(x)
         if not self.last:
