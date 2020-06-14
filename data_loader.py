@@ -6,7 +6,8 @@ from tqdm import tqdm
 import os
 
 class MyAudioDataset(Dataset):
-    def __init__(self, manifest_path, labels_path, max_duration=16):
+    def __init__(self, manifest_path, labels_path, max_duration=16,mask=False):
+        self.mask = mask
         self.datasets = []
         self.labels = {}
         with open(manifest_path, encoding='utf-8') as f:
@@ -23,9 +24,9 @@ class MyAudioDataset(Dataset):
     def __getitem__(self, index):
         data = self.datasets[index]
         text2id = [self.char2index[char] for char in data['text']]
-        return self.parse_audio(data["audio_filepath"]), text2id, data['audio_filepath']
+        return self.parse_audio(data["audio_filepath"],mask=self.mask), text2id, data['audio_filepath']
 
-    def parse_audio(self, audio_path, win_len=0.02):
+    def parse_audio(self, audio_path, win_len=0.02,mask=False):
         if not os.path.exists(path=audio_path):
             raise("音频路径不存在 "+ audio_path)
         y, sr = torchaudio.load(audio_path)
@@ -35,9 +36,16 @@ class MyAudioDataset(Dataset):
                                                            hop_length=hop_length, n_mels=64)
         spec = transformer(y)
         y = torchaudio.transforms.AmplitudeToDB(stype="power")(spec)
+
+        # F-T mask
+        audio_f_mask = torchaudio.transforms.FrequencyMasking(freq_mask_param=8)
+        audio_t_mask = torchaudio.transforms.TimeMasking(time_mask_param=16)
         # 归一化
         std, mean = torch.std_mean(y)
         y = torch.div((y-mean), std)
+        if mask:
+            y = audio_f_mask(y)
+            y = audio_t_mask(y)
         return y  # (1,64,T)
 
     def id2txt(self, id_list):
@@ -86,7 +94,7 @@ class MyAudioLoader(DataLoader):
             target_sizes[x] = len(trans_txt)
             # targets[x].narrow(0,0,len(trans_txt)).copy_(torch.IntTensor(trans_txt))
             targets.extend(trans_txt)
-        # return [(N,1,64,T),(N,Length),(N),(N),lists] N=batch_size
+        # return [(N,64,T),(N,Length),(N),(N),lists] N=batch_size
         targets = torch.IntTensor(targets)
         return inputs, targets, input_percentages, target_sizes, paths
 

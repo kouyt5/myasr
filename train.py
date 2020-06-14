@@ -6,8 +6,12 @@ from decoder import GreedyDecoder
 from tqdm import tqdm
 from ASR_metrics import utils as metrics
 from apex import amp
+from torchsummary import summary
 
-
+def set_lr(optimizer,lr,weigth_decay):
+    for param in optimizer.param_groups:
+        param['lr'] = lr
+        param['weight_decay']=weigth_decay
 def evalute(model, loader, device):
     model.eval()
     model.to(device=device)
@@ -49,7 +53,7 @@ def evalute(model, loader, device):
     print("eval avg wer:{}".format(wer, '0.2f'))
     print("trues: "+ground_trues[0])
     print("preds: "+trans_pre[0][0][0])
-
+    return total_loss/total_count
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dev_manifest_path = "./data/dev-clean.json"
@@ -59,30 +63,30 @@ model = MyModel2()
 
 dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
 dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=True,shuffle=True)
-train_datasets = MyAudioDataset(train_manifest_path, labels_path,max_duration=16)
+train_datasets = MyAudioDataset(train_manifest_path, labels_path,max_duration=16,mask=True)
 train_dataloader = MyAudioLoader(train_datasets, batch_size=16, drop_last=True,shuffle=True)
 criterion = nn.CTCLoss(blank=0, reduction="mean")
-optim = torch.optim.SGD(model.parameters(), lr=0.05, momentum=0.9, nesterov=True,weight_decay=1e-4)
+optim = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, nesterov=True,weight_decay=1e-4)
 # optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5, amsgrad=True)
 decoder = GreedyDecoder(labels_path)
 if torch.cuda.is_available():
     map_location = 'cuda:0'
 else:
     map_location = 'cpu'
-# model = torch.load('checkpoint/0.pth')
-# evalute(model, dev_dataloader, device)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",factor=0.1,patience=2,verbose=True)
 
 # apex
-model.to(device=device)
+model = model.to(device=device)
+summary(model,[(64,512),(1,)],device="cuda")
 opt_level = 'O1'
 model, optim = amp.initialize(model, optim, opt_level=opt_level)
-checkpoint = torch.load('checkpoint/17.pt')
+checkpoint = torch.load('checkpoint/1.pt')
 model.load_state_dict(checkpoint['model'])
 optim.load_state_dict(checkpoint['optimizer'])
 amp.load_state_dict(checkpoint['amp'])
 evalute(model, dev_dataloader, device)
-for epoch in range(18, 150):
-    # torch.save(model, "checkpoint/"+str(epoch)+".pt")
+# set_lr(optim,0.01,1e-4)
+for epoch in range(1, 40):
     cer_list_pairs = []
     wer_list_pairs = []
     total_count = 0
@@ -137,4 +141,5 @@ for epoch in range(18, 150):
                 'amp': amp.state_dict()
             }
             torch.save(checkpoint, 'checkpoint/{}.pt'.format(epoch))
-    evalute(model, dev_dataloader, device)
+    avg_loss = evalute(model, dev_dataloader, device)
+    scheduler.step(avg_loss)

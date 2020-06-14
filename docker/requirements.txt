@@ -1,3 +1,4 @@
 ASR-metrics==1.0.12
 torchaudio==0.5.0
+torch-summary
 sox

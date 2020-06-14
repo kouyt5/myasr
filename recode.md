@@ -121,7 +121,7 @@ eval avg cer:0.46572216555982515
 eval avg wer:0.9229052516228412
 eval wer: 0.83 cer: 0.55
 
-# train-100 QuartNet
+# train-100 QuartNet shuffle 在深度可分离卷积中间
 epoch12 
 eval loss: 0.8432261347770691
 eval avg cer:0.3141713566294957
@@ -132,3 +132,73 @@ eval loss: 0.7768691778182983
 eval avg cer:0.2933178275210534
 eval avg wer:0.681502759749911
 eval wer: 0.67 cer: 0.28
+
+epoch 47 wer=0.53
+
+# train-100 QuartNet shuffle在深度可分离卷积后面 收敛较快
+lr=0.01 weight_decay=1e-4 结构5*5
+epoch0
+eval avg loss: 1.8585794044772224
+eval avg cer:0.5887520562397188
+eval avg wer:0.9581412462394217
+
+epoch1
+eval avg loss: 1.3110620762820535
+eval avg cer:0.4396990706003582
+eval avg wer:0.8460822309307814
+
+epoch2
+eval avg loss: 1.3734615614902992
+eval avg cer:0.42000609972551234
+eval avg wer:0.8384373985499405
+epoch3
+eval avg loss: 1.1817917892817227
+eval avg cer:0.37411003559857603
+eval avg wer:0.8031992034459621
+epoch5
+eval avg loss: 0.8181729514460795
+eval avg cer:0.26251675234532834
+eval avg wer:0.6501352960277086
+epoch6
+eval avg loss: 0.7752706212616862
+eval avg cer:0.2451388715282118
+eval avg wer:0.6298043628808865
+epoch7
+eval avg loss: 0.7117968867175829
+eval avg cer:0.22269210005398596
+eval avg wer:0.5923185113058531
+epoch8
+eval avg loss: 0.709389779442726
+eval avg cer:0.2788514908916347
+eval avg wer:0.6061524473405061
+
+9
+eval avg loss: 0.7318803619051204
+eval avg cer:0.22608560809560255
+eval avg wer:0.5929197791490743
+10
+eval avg loss: 0.7358196154353391
+eval avg cer:0.22273615993519386
+eval avg wer:0.5937709672532087
+11
+eval avg loss: 0.7135171439259638
+eval avg cer:0.23037931655035893
+eval avg wer:0.5897602354366831
+12
+eval avg loss: 0.7544848580548834
+eval avg cer:0.24835653760591897
+eval avg wer:0.642169274383778
+epoch40
+wer0.53
+如果加上audioAugment epoch22 wer=0.47 lr=0.1
+# train100 augment 40 16 lr0.1 wd=1e-3
+epoch 1
+eval avg loss: 1.5675727397623196
+eval avg cer:0.5044144261246039
+eval avg wer:0.9065766409141076
+epoch2
+eval avg loss: 1.3738680002461763
+eval avg cer:0.44557137929827895
+eval avg wer:0.8766797221561032
+# train100+360
+wer0.33
