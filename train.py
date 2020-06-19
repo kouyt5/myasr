@@ -57,15 +57,16 @@ def evalute(model, loader, device):
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dev_manifest_path = "./data/dev-clean.json"
-train_manifest_path = "./data/train-clean-100.json"
+train_manifest_path = "./data/train-460.json"
 labels_path = "./data/labels.txt"
 model = MyModel2()
 
 dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
 dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=True,shuffle=True)
-train_datasets = MyAudioDataset(train_manifest_path, labels_path,max_duration=16,mask=True)
-train_dataloader = MyAudioLoader(train_datasets, batch_size=16, drop_last=True,shuffle=True)
+train_datasets = MyAudioDataset(train_manifest_path, labels_path,max_duration=17,mask=True)
+train_dataloader = MyAudioLoader(train_datasets, batch_size=32, drop_last=True,shuffle=True)
 criterion = nn.CTCLoss(blank=0, reduction="mean")
+# 使用Adam无法收敛，SGD比较好调整
 optim = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, nesterov=True,weight_decay=1e-4)
 # optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5, amsgrad=True)
 decoder = GreedyDecoder(labels_path)
@@ -73,20 +74,22 @@ if torch.cuda.is_available():
     map_location = 'cuda:0'
 else:
     map_location = 'cpu'
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",factor=0.1,patience=2,verbose=True)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
+        factor=0.1,patience=2,min_lr=1e-4,verbose=True)
 
-# apex
 model = model.to(device=device)
-summary(model,[(64,512),(1,)],device="cuda")
+summary(model,[(64,512),(1,)],device="cuda") # 探测模型结构
+# apex 混合精度加速训练
 opt_level = 'O1'
 model, optim = amp.initialize(model, optim, opt_level=opt_level)
-checkpoint = torch.load('checkpoint/1.pt')
+checkpoint = torch.load('checkpoint/5.pt')
 model.load_state_dict(checkpoint['model'])
 optim.load_state_dict(checkpoint['optimizer'])
 amp.load_state_dict(checkpoint['amp'])
-evalute(model, dev_dataloader, device)
+scheduler.load_state_dict(checkpoint['scheduler'])
+# evalute(model, dev_dataloader, device)
 # set_lr(optim,0.01,1e-4)
-for epoch in range(1, 40):
+for epoch in range(6, 60):
     cer_list_pairs = []
     wer_list_pairs = []
     total_count = 0
@@ -107,7 +110,6 @@ for epoch in range(1, 40):
             scaled_loss.backward()
         optim.step()
         trans_pre = decoder.decode(out)
-        # print(trans_pre[0][0][0])
         ground_trues = []
         start = 0
         for i in range(len(trans_lengths)):
@@ -115,8 +117,6 @@ for epoch in range(1, 40):
             trans_list = trans.narrow(0, start, add).numpy().tolist()
             start += add
             ground_trues.append(decoder.decoder_by_number(trans_list))
-        # true = trans.narrow(0,0,trans_lengths[0].int()).int().numpy().tolist()
-        # print(ground_trues[0])
         cer_list_pairs.extend([(ground_trues[i].replace(' ', ''), trans_pre[0][i][0].replace(' ', ''))
                           for i in range(len(trans_lengths))])
         wer_list_pairs.extend([(ground_trues[i], trans_pre[0][i][0])
@@ -134,11 +134,11 @@ for epoch in range(1, 40):
             print("avg wer:{}".format(wer, '0.2f'))
             print("trues: "+ground_trues[0])
             print("preds: "+trans_pre[0][0][0])
-    # torch.save(model, "checkpoint/"+str(epoch)+".pth")
             checkpoint = {
                 'model': model.state_dict(),
                 'optimizer': optim.state_dict(),
-                'amp': amp.state_dict()
+                'amp': amp.state_dict(),
+                'scheduler': scheduler.state_dict()
             }
             torch.save(checkpoint, 'checkpoint/{}.pt'.format(epoch))
     avg_loss = evalute(model, dev_dataloader, device)
