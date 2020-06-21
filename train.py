@@ -12,6 +12,7 @@ from torch.nn.parallel import DistributedDataParallel
 from torchelastic.utils.data import ElasticDistributedSampler
 import torch.distributed as dist
 from datetime import timedelta
+from ruamel.yaml import YAML
 
 def set_lr(optimizer,lr,weigth_decay):
     for param in optimizer.param_groups:
@@ -70,9 +71,12 @@ dist.init_process_group(
 )
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-dev_manifest_path = "./data/dev-clean.json"
-train_manifest_path = "./data/train-clean-100.json"
-labels_path = "./data/labels.txt"
+config_path = "conf.yaml"
+with open(config_path, encoding='utf-8') as f:
+    params = YAML(typ='safe').load(f)
+dev_manifest_path = params['datasets']['dev_datasets']
+train_manifest_path = params['datasets']['train_datasets']
+labels_path = params['datasets']['label']
 model = MyModel2()
 model.to(device)
 # 使用Adam无法收敛，SGD比较好调整

@@ -14,8 +14,7 @@ RUN apt install git -y \
     && rm -r ../apex
 
 # install utilities and dependencies
-RUN pip install awscli --upgrade
-
+RUN pip install awscli --upgrade ruamel.yaml
 WORKDIR /workspace
 USER root
 ENTRYPOINT ["python", "-m", "torchelastic.distributed.launch"]
