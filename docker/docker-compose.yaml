@@ -1,0 +1,13 @@
+version: "2.4"
+services:
+    etcd-server:
+      image: 'bitnami/etcd:latest'
+      environment:
+        - ALLOW_NONE_AUTHENTICATION=yes
+        - ETCD_ADVERTISE_CLIENT_URLS=http://192.168.1.104:2379
+        - ETCD_ENABLE_V2=1
+      ports:
+        - 2379:2379
+        - 2380:2380
+      network_mode: 'host'
+# 启动一个ecid，管理集群，所有节点向这个应用发送数据

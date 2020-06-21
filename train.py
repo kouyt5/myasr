@@ -1,4 +1,5 @@
 import torch
+import os,sys
 from MyModel import MyModel, MyModel2
 from data_loader import MyAudioLoader, MyAudioDataset
 import torch.nn as nn
@@ -7,6 +8,10 @@ from tqdm import tqdm
 from ASR_metrics import utils as metrics
 from apex import amp
 from torchsummary import summary
+from torch.nn.parallel import DistributedDataParallel
+from torchelastic.utils.data import ElasticDistributedSampler
+import torch.distributed as dist
+from datetime import timedelta
 
 def set_lr(optimizer,lr,weigth_decay):
     for param in optimizer.param_groups:
@@ -55,41 +60,51 @@ def evalute(model, loader, device):
     print("preds: "+trans_pre[0][0][0])
     return total_loss/total_count
 
+# dist
+device_id = int(os.environ["LOCAL_RANK"])
+torch.cuda.set_device(device_id)
+print(f"=> set cuda device = {device_id}")
+os.environ["NCCL_BLOCKING_WAIT"] = "1"
+dist.init_process_group(
+    backend="nccl", init_method="env://", timeout=timedelta(seconds=10)
+)
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dev_manifest_path = "./data/dev-clean.json"
-train_manifest_path = "./data/train-460.json"
+train_manifest_path = "./data/train-clean-100.json"
 labels_path = "./data/labels.txt"
 model = MyModel2()
+model.to(device)
+# 使用Adam无法收敛，SGD比较好调整
+optim = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, nesterov=True,weight_decay=1e-4)
+# optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5, amsgrad=True)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
+        factor=0.1,patience=2,min_lr=1e-4,verbose=True)
+# apex 混合精度加速训练
+opt_level = 'O1'
+model, optim = amp.initialize(model, optim, opt_level=opt_level)
+# dist
+model = DistributedDataParallel(model, device_ids=[device_id])
 
 dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
 dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=True,shuffle=True)
 train_datasets = MyAudioDataset(train_manifest_path, labels_path,max_duration=17,mask=True)
-train_dataloader = MyAudioLoader(train_datasets, batch_size=32, drop_last=True,shuffle=True)
+train_sampler = ElasticDistributedSampler(train_datasets)
+train_dataloader = MyAudioLoader(train_datasets, batch_size=32, drop_last=True,sampler=train_sampler)
 criterion = nn.CTCLoss(blank=0, reduction="mean")
-# 使用Adam无法收敛，SGD比较好调整
-optim = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, nesterov=True,weight_decay=1e-4)
-# optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5, amsgrad=True)
 decoder = GreedyDecoder(labels_path)
-if torch.cuda.is_available():
-    map_location = 'cuda:0'
-else:
-    map_location = 'cpu'
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
-        factor=0.1,patience=2,min_lr=1e-4,verbose=True)
 
-model = model.to(device=device)
+# model = model.to(device=device)
 summary(model,[(64,512),(1,)],device="cuda") # 探测模型结构
-# apex 混合精度加速训练
-opt_level = 'O1'
-model, optim = amp.initialize(model, optim, opt_level=opt_level)
-checkpoint = torch.load('checkpoint/5.pt')
+
+checkpoint = torch.load('checkpoint/0.pt')
 model.load_state_dict(checkpoint['model'])
 optim.load_state_dict(checkpoint['optimizer'])
 amp.load_state_dict(checkpoint['amp'])
 scheduler.load_state_dict(checkpoint['scheduler'])
 # evalute(model, dev_dataloader, device)
 # set_lr(optim,0.01,1e-4)
-for epoch in range(6, 60):
+for epoch in range(0, 60):
     cer_list_pairs = []
     wer_list_pairs = []
     total_count = 0
@@ -122,7 +137,7 @@ for epoch in range(6, 60):
         wer_list_pairs.extend([(ground_trues[i], trans_pre[0][i][0])
                           for i in range(len(trans_lengths))])
         total_loss += loss.item()
-        if total_count % 50 == 0:
+        if total_count % 20 == 0:
             try:
                 wer = metrics.compute_wer_list_pair(wer_list_pairs)
                 cer = metrics.calculate_cer_list_pair(cer_list_pairs)
