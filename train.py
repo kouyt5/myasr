@@ -8,7 +8,8 @@ from tqdm import tqdm
 from ASR_metrics import utils as metrics
 from apex import amp
 from torchsummary import summary
-from torch.nn.parallel import DistributedDataParallel
+# from torch.nn.parallel import DistributedDataParallel
+from apex.parallel import DistributedDataParallel
 from torchelastic.utils.data import ElasticDistributedSampler
 import torch.distributed as dist
 from datetime import timedelta
@@ -88,7 +89,8 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
 opt_level = 'O1'
 model, optim = amp.initialize(model, optim, opt_level=opt_level)
 # dist
-model = DistributedDataParallel(model, device_ids=[device_id])
+# model = DistributedDataParallel(model, device_ids=[device_id])
+model = DistributedDataParallel(model)
 
 dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
 dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=True,shuffle=True)
@@ -141,7 +143,7 @@ for epoch in range(0, 60):
         wer_list_pairs.extend([(ground_trues[i], trans_pre[0][i][0])
                           for i in range(len(trans_lengths))])
         total_loss += loss.item()
-        if total_count % 20 == 0:
+        if total_count % 5 == 0:
             try:
                 wer = metrics.compute_wer_list_pair(wer_list_pairs)
                 cer = metrics.calculate_cer_list_pair(cer_list_pairs)
