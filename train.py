@@ -101,11 +101,11 @@ decoder = GreedyDecoder(labels_path)
 # model = model.to(device=device)
 summary(model,[(64,512),(1,)],device="cuda") # 探测模型结构
 
-checkpoint = torch.load('checkpoint/0.pt')
-model.load_state_dict(checkpoint['model'])
-optim.load_state_dict(checkpoint['optimizer'])
-amp.load_state_dict(checkpoint['amp'])
-scheduler.load_state_dict(checkpoint['scheduler'])
+# checkpoint = torch.load('checkpoint/0.pt')
+# model.load_state_dict(checkpoint['model'])
+# optim.load_state_dict(checkpoint['optimizer'])
+# amp.load_state_dict(checkpoint['amp'])
+# scheduler.load_state_dict(checkpoint['scheduler'])
 # evalute(model, dev_dataloader, device)
 # set_lr(optim,0.01,1e-4)
 for epoch in range(0, 60):

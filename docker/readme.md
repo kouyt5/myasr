@@ -37,7 +37,7 @@ $ cat /etc/hosts
 ## 启动步骤
 
 进入docker目录
-1. `docker-build -t myasr:v0.1_dist` 构建镜像
+1. `docker-build -t myasr:v1.1_dist` 构建镜像
 2. `docker-compose up` 启动ecid实例，作为集群的管理者，应该是所有的节点都会向改容器发送数据
 3. 在每一个结点上 `docker-compose -f docker-compose-train.yaml` 启动每个节点，节点数目在docker-compose-train.yaml的`--nnodes`设置
 
