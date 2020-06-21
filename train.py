@@ -79,7 +79,7 @@ dev_manifest_path = params['datasets']['dev_datasets']
 train_manifest_path = params['datasets']['train_datasets']
 labels_path = params['datasets']['label']
 model = MyModel2()
-model.to(device)
+
 # 使用Adam无法收敛，SGD比较好调整
 optim = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, nesterov=True,weight_decay=1e-4)
 # optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5, amsgrad=True)
@@ -91,7 +91,7 @@ model, optim = amp.initialize(model, optim, opt_level=opt_level)
 # dist
 # model = DistributedDataParallel(model, device_ids=[device_id])
 model = DistributedDataParallel(model)
-
+model.to(device)
 dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
 dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=True,shuffle=True)
 train_datasets = MyAudioDataset(train_manifest_path, labels_path,max_duration=17,mask=True)
