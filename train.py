@@ -21,7 +21,7 @@ def set_lr(optimizer,lr,weigth_decay):
         param['weight_decay']=weigth_decay
 def evalute(model, loader, device):
     model.eval()
-    model.to(device=device)
+    # model.to(device=device)
     cer_list_pairs = []
     wer_list_pairs = []
     total_count = 0
@@ -92,7 +92,7 @@ model, optim = amp.initialize(model, optim, opt_level=opt_level)
 # model = DistributedDataParallel(model, device_ids=[device_id])
 model = DistributedDataParallel(model)
 dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
-dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=True,shuffle=True)
+dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=True,shuffle=False)
 train_datasets = MyAudioDataset(train_manifest_path, labels_path,max_duration=17,mask=True)
 train_sampler = ElasticDistributedSampler(train_datasets)
 train_dataloader = MyAudioLoader(train_datasets, batch_size=32, drop_last=True,sampler=train_sampler)
@@ -142,7 +142,7 @@ for epoch in range(0, 60):
         wer_list_pairs.extend([(ground_trues[i], trans_pre[0][i][0])
                           for i in range(len(trans_lengths))])
         total_loss += loss.item()
-        if total_count % 5 == 0:
+        if total_count % 50 == 0:
             try:
                 wer = metrics.compute_wer_list_pair(wer_list_pairs)
                 cer = metrics.calculate_cer_list_pair(cer_list_pairs)

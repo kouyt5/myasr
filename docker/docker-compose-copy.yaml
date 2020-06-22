@@ -1,10 +1,11 @@
 version: '2.4'
 services: 
-  examples:
+  examples1:
     image: myasr:v1.1_dist
     # Use a volume mount to point to your own scripts without rebuilding the image
     volumes:
       - /mnt/volume/workspace/myasr:/mnt/volume/workspace/myasr
+      - /mnt/volume/workspace/datasets:/mnt/volume/workspace/datasets
     #   - /mnt/volume/workspace/datasets:/mnt/volume/workspace/datasets
     working_dir: /mnt/volume/workspace/myasr
     command:  --nnodes=2 --nproc_per_node=1 --rdzv_id=2 --rdzv_endpoint=192.168.1.104 train.py
