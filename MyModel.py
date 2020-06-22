@@ -104,7 +104,7 @@ class QuartNet(nn.Module):
         x = self.block3(x,percents)
         x = self.block4(x,percents)
         x = self.block5(x,percents)
-        x = self.last_cnn(x)
+        x = self.last_cnn(x,percents)
         x = self.last_cnn2(x)
         x = self.last_cnn3(x)
         return x
