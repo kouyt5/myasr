@@ -5,7 +5,7 @@ import math
 
 
 class SeprationConv(nn.Module):
-    def __init__(self, in_ch, out_ch, k=33,last=False):
+    def __init__(self, in_ch, out_ch, k=33,last=False,mask=True):
         super(SeprationConv,self).__init__()
         self.last = last
         self.depthwise_conv = nn.Conv1d(in_ch, in_ch, kernel_size=k, stride=1,
@@ -18,7 +18,8 @@ class SeprationConv(nn.Module):
         x = self.depthwise_conv(input)
         x = self.pointwise_conv(x)
         x = self.channel_shuffle(x, groups=4)
-        x = self.maskcnn(x,percents)
+        if mask:
+            x = self.maskcnn(x,percents)
         x = self.bn(x)
         if not self.last:
             x= self.relu(x)
@@ -38,17 +39,17 @@ class SeprationConv(nn.Module):
         return x
 
 class QuartNetBlock(nn.Module):
-    def __init__(self, repeat=3,in_ch=1,out_ch=32,k=33):
+    def __init__(self, repeat=3,in_ch=1,out_ch=32,k=33,mask=True):
         super(QuartNetBlock, self).__init__()
         seq = []
         for i in range(0,repeat-1):
-            sep = SeprationConv(in_ch,in_ch,k)
+            sep = SeprationConv(in_ch,in_ch,k,mask)
             seq.append(sep)
         self.reside = nn.Sequential(
             nn.Conv1d(in_ch,out_ch,kernel_size=1),
             nn.BatchNorm1d(out_ch),
         )
-        last_sep = SeprationConv(in_ch,out_ch,k=k,last=True)
+        last_sep = SeprationConv(in_ch,out_ch,k=k,last=True,mask=mask)
         seq.append(last_sep)
         self.seq = nn.ModuleList(seq)
         self.last_relu = nn.ReLU()
@@ -84,7 +85,7 @@ class QuartNet(nn.Module):
         #     nn.BatchNorm1d(512),
         #     nn.ReLU(),
         # )
-        self.last_cnn = QuartNetBlock(repeat=1,in_ch=512,out_ch=512,k=87)
+        self.last_cnn = QuartNetBlock(repeat=1,in_ch=512,out_ch=512,k=87,mask=False)
         self.last_cnn2 = nn.Sequential(
             nn.Conv1d(512, 1024, kernel_size= 1, stride=1),
             nn.BatchNorm1d(1024),
