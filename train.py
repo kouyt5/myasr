@@ -81,7 +81,7 @@ labels_path = params['datasets']['label']
 model = MyModel2()
 model.to("cuda")
 # 使用Adam无法收敛，SGD比较好调整
-optim = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, nesterov=True,weight_decay=1e-4)
+optim = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, nesterov=True,weight_decay=1e-4)
 # optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5, amsgrad=True)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
         factor=0.1,patience=2,min_lr=1e-4,verbose=True)
