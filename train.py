@@ -81,7 +81,7 @@ labels_path = params['datasets']['label']
 model = MyModel2()
 model.to("cuda")
 # 使用Adam无法收敛，SGD比较好调整
-optim = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, nesterov=True,weight_decay=1e-4)
+optim = torch.optim.SGD(model.parameters(), lr=0.3, momentum=0.9, nesterov=True,weight_decay=1e-4)
 # optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5, amsgrad=True)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
         factor=0.1,patience=2,min_lr=1e-4,verbose=True)
@@ -92,7 +92,8 @@ model, optim = amp.initialize(model, optim, opt_level=opt_level)
 # model = DistributedDataParallel(model, device_ids=[device_id])
 model = DistributedDataParallel(model)
 dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
-dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=True,shuffle=False)
+val_sample = ElasticDistributedSampler(dev_datasets)
+dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=True,sampler=val_sample)
 train_datasets = MyAudioDataset(train_manifest_path, labels_path,max_duration=17,mask=True)
 train_sampler = ElasticDistributedSampler(train_datasets)
 train_dataloader = MyAudioLoader(train_datasets, batch_size=32, drop_last=True,sampler=train_sampler)
@@ -161,5 +162,6 @@ for epoch in range(0, 60):
                 'scheduler': scheduler.state_dict()
             }
             torch.save(checkpoint, 'checkpoint/{}.pt'.format(epoch))
-    avg_loss = evalute(model, dev_dataloader, device)
+    with torch.no_grad():
+        avg_loss = evalute(model, dev_dataloader, device)
     scheduler.step(avg_loss)
