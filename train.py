@@ -14,6 +14,12 @@ from torchelastic.utils.data import ElasticDistributedSampler
 import torch.distributed as dist
 from datetime import timedelta
 from ruamel.yaml import YAML
+import argparse
+parser = argparse.ArgumentParser(description='asr distribution training')
+parser.add_argument('--lr',default=1e-1,type=float,help='学习率')
+parser.add_argument('--checkpoint_path',type=str,help='checkpoint文件位置')
+parser.add_argument('--continue_learning',action="store_true",help='continue_learning')
+args = parser.parse_args()
 
 def set_lr(optimizer,lr,weigth_decay):
     for param in optimizer.param_groups:
@@ -81,7 +87,7 @@ labels_path = params['datasets']['label']
 model = MyModel2()
 model.to("cuda")
 # 使用Adam无法收敛，SGD比较好调整
-optim = torch.optim.SGD(model.parameters(), lr=0.3, momentum=0.9, nesterov=True,weight_decay=1e-4)
+optim = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, nesterov=True,weight_decay=1e-4)
 # optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5, amsgrad=True)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
         factor=0.1,patience=2,min_lr=1e-4,verbose=True)
@@ -103,19 +109,23 @@ decoder = GreedyDecoder(labels_path)
 # model = model.to(device=device)
 summary(model,[(64,512),(1,)],device="cuda") # 探测模型结构
 
-# checkpoint = torch.load('checkpoint/0.pt')
-# model.load_state_dict(checkpoint['model'])
-# optim.load_state_dict(checkpoint['optimizer'])
-# amp.load_state_dict(checkpoint['amp'])
-# scheduler.load_state_dict(checkpoint['scheduler'])
+end_epoch = 0
+if args.continue_learning:
+    checkpoint = torch.load(args.checkpoint_path)
+    model.load_state_dict(checkpoint['model'])
+    optim.load_state_dict(checkpoint['optimizer'])
+    amp.load_state_dict(checkpoint['amp'])
+    scheduler.load_state_dict(checkpoint['scheduler'])
+    end_epoch = checkpoint['epoch']
 # evalute(model, dev_dataloader, device)
 # set_lr(optim,0.01,1e-4)
-for epoch in range(0, 60):
+for epoch in range(end_epoch, 60):
     cer_list_pairs = []
     wer_list_pairs = []
     total_count = 0
     total_loss = 0
     model.train()
+    train_sampler.set_epoch(epoch)
     for (i, batch) in tqdm(enumerate(train_dataloader), total=len(train_dataloader)):
         total_count +=1
         input = batch[0]
@@ -159,7 +169,8 @@ for epoch in range(0, 60):
                 'model': model.state_dict(),
                 'optimizer': optim.state_dict(),
                 'amp': amp.state_dict(),
-                'scheduler': scheduler.state_dict()
+                'scheduler': scheduler.state_dict(),
+                'epoch': epoch
             }
             torch.save(checkpoint, 'checkpoint/{}.pt'.format(epoch))
     with torch.no_grad():
