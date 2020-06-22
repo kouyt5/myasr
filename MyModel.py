@@ -78,24 +78,18 @@ class QuartNet(nn.Module):
         self.block5 = QuartNetBlock(repeat=5,in_ch=512,out_ch=512,k=75)
 
         # self.last_cnn = nn.Sequential(
-        #     nn.Conv1d(512, 512, kernel_size= 87, stride=1,groups=8,
+        #     nn.Conv1d(512, 512, kernel_size= 87, stride=1,groups=512,
         #               padding=87//2),
+        #     nn.Conv1d(512, 512, kernel_size=1, stride=1),
         #     nn.BatchNorm1d(512),
         #     nn.ReLU(),
         # )
-        self.last_cnn = nn.Sequential(
-            nn.Conv1d(512, 512, kernel_size= 87, stride=1,groups=512,
-                      padding=87//2),
-            nn.Conv1d(512, 512, kernel_size=1, stride=1),
-            nn.BatchNorm1d(512),
-            nn.ReLU(),
-        )
+        self.last_cnn = QuartNetBlock(repeat=1,in_ch=512,out_ch=512,k=87)
         self.last_cnn2 = nn.Sequential(
             nn.Conv1d(512, 1024, kernel_size= 1, stride=1),
             nn.BatchNorm1d(1024),
             nn.ReLU(),
         )
-
         self.last_cnn3 = nn.Sequential(
             nn.Conv1d(1024, 29, kernel_size=1, stride=1,dilation=2),
             nn.BatchNorm1d(29),
