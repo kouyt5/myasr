@@ -8,6 +8,7 @@ class SeprationConv(nn.Module):
     def __init__(self, in_ch, out_ch, k=33,last=False,mask=True):
         super(SeprationConv,self).__init__()
         self.last = last
+        self.mask = mask
         self.depthwise_conv = nn.Conv1d(in_ch, in_ch, kernel_size=k, stride=1,
                       padding= k // 2, groups=in_ch)
         self.pointwise_conv = nn.Conv1d(in_ch, out_ch, kernel_size=1, stride=1)
@@ -18,7 +19,7 @@ class SeprationConv(nn.Module):
         x = self.depthwise_conv(input)
         x = self.pointwise_conv(x)
         x = self.channel_shuffle(x, groups=4)
-        if mask:
+        if self.mask:
             x = self.maskcnn(x,percents)
         x = self.bn(x)
         if not self.last:
