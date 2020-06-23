@@ -14,6 +14,7 @@ from torchelastic.utils.data import ElasticDistributedSampler
 import torch.distributed as dist
 from datetime import timedelta
 from ruamel.yaml import YAML
+import shutil
 import argparse
 parser = argparse.ArgumentParser(description='asr distribution training')
 parser.add_argument('--lr',default=1e-1,type=float,help='学习率')
@@ -74,7 +75,7 @@ torch.cuda.set_device(device_id)
 print(f"=> set cuda device = {device_id}")
 os.environ["NCCL_BLOCKING_WAIT"] = "1"
 dist.init_process_group(
-    backend="nccl", init_method="env://", timeout=timedelta(seconds=10)
+    backend="nccl", init_method="env://", timeout=timedelta(seconds=30)
 )
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -173,6 +174,7 @@ for epoch in range(end_epoch, 60):
                 'epoch': epoch
             }
             torch.save(checkpoint, 'checkpoint/{}.pt'.format(epoch))
+            shutil.copy('checkpoint/{}.pt'.format(epoch),'checkpoint/latest.pt')
     with torch.no_grad():
         avg_loss = evalute(model, dev_dataloader, device)
     scheduler.step(avg_loss)
