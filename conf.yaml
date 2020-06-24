@@ -1,4 +1,4 @@
 datasets:
     dev_datasets: "/mnt/volume/workspace/datasets/librispeech/dev-clean.json"
-    train_datasets: "/mnt/volume/workspace/datasets/librispeech/train-460.json"
+    train_datasets: "/mnt/volume/workspace/datasets/librispeech/train-960.json"
     label: "/mnt/volume/workspace/datasets/librispeech/labels.txt"

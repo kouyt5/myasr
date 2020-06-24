@@ -67,7 +67,7 @@ def evalute(model, loader, device):
     print("eval avg wer:{}".format(wer, '0.2f'))
     print("trues: "+ground_trues[0])
     print("preds: "+trans_pre[0][0][0])
-    return total_loss/total_count
+    return total_loss/total_count, wer, cer
 
 # dist
 device_id = int(os.environ["LOCAL_RANK"])
@@ -176,5 +176,5 @@ for epoch in range(end_epoch, 60):
             torch.save(checkpoint, 'checkpoint/{}.pt'.format(epoch))
             shutil.copy('checkpoint/{}.pt'.format(epoch),'checkpoint/latest.pt')
     with torch.no_grad():
-        avg_loss = evalute(model, dev_dataloader, device)
+        avg_loss,avg_wer, avg_cer = evalute(model, dev_dataloader, device)
     scheduler.step(avg_loss)
