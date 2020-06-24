@@ -16,6 +16,7 @@ from datetime import timedelta
 from ruamel.yaml import YAML
 import shutil
 import argparse
+from vis import VisdomLogger, State
 parser = argparse.ArgumentParser(description='asr distribution training')
 parser.add_argument('--lr',default=1e-1,type=float,help='学习率')
 parser.add_argument('--checkpoint_path',type=str,help='checkpoint文件位置')
@@ -112,6 +113,7 @@ summary(model,[(64,512),(1,)],device="cuda") # 探测模型结构
 
 end_epoch = 0
 if args.continue_learning:
+    print("continue learning")
     checkpoint = torch.load(args.checkpoint_path)
     model.load_state_dict(checkpoint['model'])
     optim.load_state_dict(checkpoint['optimizer'])
@@ -120,7 +122,11 @@ if args.continue_learning:
     end_epoch = checkpoint['epoch']
 # evalute(model, dev_dataloader, device)
 # set_lr(optim,0.01,1e-4)
-for epoch in range(end_epoch, 60):
+
+# visdom
+vis = VisdomLogger(200)
+stat = State()
+for epoch in range(end_epoch, 200):
     cer_list_pairs = []
     wer_list_pairs = []
     total_count = 0
@@ -177,4 +183,6 @@ for epoch in range(end_epoch, 60):
             shutil.copy('checkpoint/{}.pt'.format(epoch),'checkpoint/latest.pt')
     with torch.no_grad():
         avg_loss,avg_wer, avg_cer = evalute(model, dev_dataloader, device)
+        stat.append(epoch,avg_loss,avg_wer,avg_cer)
+        vis.update(stat.get_len(),stat)
     scheduler.step(avg_loss)

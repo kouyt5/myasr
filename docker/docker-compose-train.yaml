@@ -1,7 +1,7 @@
 version: '2.4'
 services: 
   examples2:
-    image: myasr:v1.1_dist
+    image: myasr:v1.2_dist
     # Use a volume mount to point to your own scripts without rebuilding the image
     volumes:
       - /mnt/volume/workspace/myasr:/mnt/volume/workspace/myasr
