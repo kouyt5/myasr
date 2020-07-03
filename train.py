@@ -167,7 +167,7 @@ for epoch in range(end_epoch, 200):
             except ZeroDivisionError:
                 print('ZeroDivisionError')
                 continue
-            print("epoch"+str(epoch) + "avg loss: "+str(total_loss/total_count))
+            print("epoch"+str(epoch) + "avg loss: "+str(total_loss/total_count) + "loss: "+str(loss.item()))
             print("avg cer:{}".format(cer, '0.2f'))
             print("avg wer:{}".format(wer, '0.2f'))
             print("trues: "+ground_trues[0])
