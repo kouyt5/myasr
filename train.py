@@ -72,6 +72,8 @@ def evalute(model, loader, device):
 
 # dist
 device_id = int(os.environ["LOCAL_RANK"])
+os.environ['MASTER_ADDR'] = '192.168.1.104'
+os.environ['MASTER_PORT'] = '8888'
 torch.cuda.set_device(device_id)
 print(f"=> set cuda device = {device_id}")
 os.environ["NCCL_BLOCKING_WAIT"] = "1"
