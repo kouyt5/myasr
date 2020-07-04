@@ -121,7 +121,7 @@ if args.continue_learning:
     scheduler.load_state_dict(checkpoint['scheduler'])
     end_epoch = checkpoint['epoch']
 # evalute(model, dev_dataloader, device)
-set_lr(optim,0.01,1e-4)
+# set_lr(optim,0.01,1e-4)
 
 # visdom
 vis = VisdomLogger(200)
