@@ -1,4 +1,9 @@
+# datasets:
+#     dev_datasets: "/mnt/volume/workspace/datasets/librispeech/dev-clean.json"
+#     train_datasets: "/mnt/volume/workspace/datasets/librispeech/train-clean-100.json"
+#     label: "/mnt/volume/workspace/datasets/librispeech/labels.txt"
+
 datasets:
-    dev_datasets: "/mnt/volume/workspace/datasets/librispeech/dev-clean.json"
-    train_datasets: "/mnt/volume/workspace/datasets/librispeech/train-clean-100.json"
-    label: "/mnt/volume/workspace/datasets/librispeech/labels.txt"
+    dev_datasets: "/mnt/volume/workspace/datasets/aishell/data_aishell/dev.json"
+    train_datasets: "/mnt/volume/workspace/datasets/aishell/data_aishell/train-12k.json"
+    label: "/mnt/volume/workspace/datasets/aishell/data_aishell/labels.txt"
