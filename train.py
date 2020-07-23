@@ -104,7 +104,7 @@ val_sample = ElasticDistributedSampler(dev_datasets)
 dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=True,sampler=val_sample)
 train_datasets = MyAudioDataset(train_manifest_path, labels_path,max_duration=17,mask=True)
 train_sampler = ElasticDistributedSampler(train_datasets)
-train_dataloader = MyAudioLoader(train_datasets, batch_size=24, drop_last=True,sampler=train_sampler)
+train_dataloader = MyAudioLoader(train_datasets, batch_size=32, drop_last=True,sampler=train_sampler)
 criterion = nn.CTCLoss(blank=0, reduction="mean")
 decoder = GreedyDecoder(labels_path)
 
