@@ -86,7 +86,7 @@ with open(config_path, encoding='utf-8') as f:
 dev_manifest_path = params['datasets']['dev_datasets']
 train_manifest_path = params['datasets']['train_datasets']
 labels_path = params['datasets']['label']
-model = MyModel2()
+model = MyModel2(labels_path)
 model.to("cuda")
 # 使用Adam无法收敛，SGD比较好调整
 optim = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, nesterov=True,weight_decay=1e-4)
@@ -126,6 +126,7 @@ if args.continue_learning:
 # visdom
 vis = VisdomLogger(200)
 stat = State()
+print("start training...")
 for epoch in range(end_epoch, 200):
     cer_list_pairs = []
     wer_list_pairs = []

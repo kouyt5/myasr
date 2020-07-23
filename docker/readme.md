@@ -33,7 +33,10 @@ $ cat /etc/hosts
 192.168.1.110   aoneasr-System-Product-Name
 192.168.1.102   lisen
 ```
-
+### nfs 挂载
+```
+sudo mount 192.168.1.104:/ /mnt/volume/workspace/datasets
+```
 ## 启动步骤
 
 进入docker目录

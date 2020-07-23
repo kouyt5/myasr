@@ -92,11 +92,7 @@ class QuartNet(nn.Module):
             nn.BatchNorm1d(1024),
             nn.ReLU(),
         )
-        self.last_cnn3 = nn.Sequential(
-            nn.Conv1d(1024, 29, kernel_size=1, stride=1,dilation=2),
-            nn.BatchNorm1d(29),
-            nn.ReLU(),
-        )
+
     def forward(self, input, percents):
         # x = input.view(input.size(0),input.size(2),input.size(3))
         x = input.squeeze(dim=1).contiguous()
@@ -108,7 +104,6 @@ class QuartNet(nn.Module):
         x = self.block5(x,percents)
         x = self.last_cnn(x,percents)
         x = self.last_cnn2(x)
-        x = self.last_cnn3(x)
         return x
 class BatchLSTM(nn.Module):
     def __init__(self,in_ch=64,out_ch=512,\
@@ -146,16 +141,26 @@ class MyModel(nn.Module):
         x = nn.functional.log_softmax(x, dim=-1)
         return x
 class MyModel2(nn.Module):
-    def __init__(self):
+    def __init__(self,labels):
         super(MyModel2, self).__init__()
         # self.maskcnn = MaskCNN()
+        self.labels = []
+        with open(labels,encoding='utf-8') as f:
+            for c in f.readlines():
+                self.labels.append(c.replace('\n',''))
         self.cnn = QuartNet()
+        self.last_cnn3 = nn.Sequential(
+            nn.Conv1d(1024, len(self.labels), kernel_size=1, stride=1,dilation=2),
+            nn.BatchNorm1d(len(self.labels)),
+            nn.ReLU(),
+        )
         # self.rnn = BatchLSTM(64*128,128,True,True)
         # self.bn1 = nn.BatchNorm1d(256)
         # self.fc = nn.Linear(256, 29)
 
     def forward(self, input, percents):
         x = self.cnn(input,percents)  # N*C*T
+        x = self.last_cnn3(x)
         # x = self.maskcnn(x, percents)
         # x = x.view(x.size(0), x.size(1)*x.size(2), -1).transpose(1, 2).contiguous()
         # lengths=torch.mul(x.size(1), percents).int()
