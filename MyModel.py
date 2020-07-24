@@ -87,7 +87,7 @@ class QuartNet(nn.Module):
         #     nn.ReLU(),
         # )
         # self.last_cnn = QuartNetBlock(repeat=1,in_ch=512,out_ch=512,k=87,mask=False)
-        self.last_cnn = SeprationConv(512,512,k=87,last=False,mask=False,dilation=2)
+        self.last_cnn = SeprationConv(512,512,k=87,last=False,mask=False,dilation=1)
         self.last_cnn2 = nn.Sequential(
             nn.Conv1d(512, 1024, kernel_size= 1, stride=1),
             nn.BatchNorm1d(1024),

@@ -38,8 +38,8 @@ class MyAudioDataset(Dataset):
         y = torchaudio.transforms.AmplitudeToDB(stype="power")(spec)
 
         # F-T mask
-        audio_f_mask = torchaudio.transforms.FrequencyMasking(freq_mask_param=7)
-        audio_t_mask = torchaudio.transforms.TimeMasking(time_mask_param=20)
+        audio_f_mask = torchaudio.transforms.FrequencyMasking(freq_mask_param=14)
+        audio_t_mask = torchaudio.transforms.TimeMasking(time_mask_param=40)
         # 归一化
         std, mean = torch.std_mean(y)
         y = torch.div((y-mean), std)
