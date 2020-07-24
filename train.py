@@ -184,8 +184,8 @@ for epoch in range(end_epoch, 200):
             }
             torch.save(checkpoint,'checkpoint/epoch%s-wer%.2f-cer%.2f.pt' % (epoch,wer,cer))
             shutil.copy('checkpoint/epoch%s-wer%.2f-cer%.2f.pt' % (epoch,wer,cer),'checkpoint/latest.pt')
+    scheduler.step() # avg_loss
     with torch.no_grad():
         avg_loss,avg_wer, avg_cer = evalute(model, dev_dataloader, device)
         stat.append(epoch,avg_loss,avg_wer,avg_cer)
         vis.update(stat.get_len(),stat)
-    scheduler.step() # avg_loss
