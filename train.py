@@ -89,10 +89,11 @@ labels_path = params['datasets']['label']
 model = MyModel2(labels_path)
 model.to("cuda")
 # 使用Adam无法收敛，SGD比较好调整
-optim = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, nesterov=True,weight_decay=1e-4)
+optim = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, nesterov=True,weight_decay=1e-5)
 # optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5, amsgrad=True)
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
-        factor=0.1,patience=2,min_lr=1e-4,verbose=True)
+# scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
+#         factor=0.1,patience=2,min_lr=1e-4,verbose=True)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optim,5,eta_min=1e-5)
 # apex 混合精度加速训练
 opt_level = 'O1'
 model, optim = amp.initialize(model, optim, opt_level=opt_level)
@@ -127,6 +128,7 @@ if args.continue_learning:
 vis = VisdomLogger(200)
 stat = State()
 print("start training...")
+print(model)
 for epoch in range(end_epoch, 200):
     cer_list_pairs = []
     wer_list_pairs = []
@@ -161,7 +163,7 @@ for epoch in range(end_epoch, 200):
         wer_list_pairs.extend([(ground_trues[i], trans_pre[0][i][0])
                           for i in range(len(trans_lengths))])
         total_loss += loss.item()
-        if total_count % 50 == 0:
+        if total_count % 40 == 0:
             try:
                 wer = metrics.compute_wer_list_pair(wer_list_pairs)
                 cer = metrics.calculate_cer_list_pair(cer_list_pairs)
@@ -181,9 +183,9 @@ for epoch in range(end_epoch, 200):
                 'epoch': epoch
             }
             torch.save(checkpoint, 'checkpoint/{}.pt'.format(epoch))
-            shutil.copy('checkpoint/{}.pt'.format(epoch),'checkpoint/latest.pt')
+            shutil.copy('checkpoint/epoch%s-wer%.2f-cer%.2f.pt' % (epoch,wer,cer),'checkpoint/latest.pt')
     with torch.no_grad():
         avg_loss,avg_wer, avg_cer = evalute(model, dev_dataloader, device)
         stat.append(epoch,avg_loss,avg_wer,avg_cer)
         vis.update(stat.get_len(),stat)
-    scheduler.step(avg_loss)
+    scheduler.step() # avg_loss
