@@ -87,7 +87,13 @@ class QuartNet(nn.Module):
         #     nn.ReLU(),
         # )
         # self.last_cnn = QuartNetBlock(repeat=1,in_ch=512,out_ch=512,k=87,mask=False)
-        self.last_cnn = SeprationConv(512,512,k=87,last=False,mask=False,dilation=2)
+        # self.last_cnn = SeprationConv(512,512,k=87,last=False,mask=False,dilation=2)
+        self.last_cnn = nn.Sequential(
+            nn.Conv1d(512, 512, kernel_size= 87, stride=1, groups=512,dilation=2),
+            nn.Conv1d(512, 512, kernel_size=1, stride=1),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+        )
         self.last_cnn2 = nn.Sequential(
             nn.Conv1d(512, 1024, kernel_size= 1, stride=1),
             nn.BatchNorm1d(1024),
@@ -103,7 +109,7 @@ class QuartNet(nn.Module):
         x = self.block3(x,percents)
         x = self.block4(x,percents)
         x = self.block5(x,percents)
-        x = self.last_cnn(x,percents)
+        x = self.last_cnn(x)
         x = self.last_cnn2(x)
         return x
 class BatchLSTM(nn.Module):
