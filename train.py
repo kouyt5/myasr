@@ -91,9 +91,6 @@ model.to("cuda")
 # 使用Adam无法收敛，SGD比较好调整
 optim = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, nesterov=True,weight_decay=1e-5)
 # optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5, amsgrad=True)
-# scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
-#         factor=0.1,patience=2,min_lr=1e-4,verbose=True)
-scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optim,5,eta_min=1e-5)
 # apex 混合精度加速训练
 opt_level = 'O1'
 model, optim = amp.initialize(model, optim, opt_level=opt_level)
@@ -108,7 +105,10 @@ train_sampler = ElasticDistributedSampler(train_datasets)
 train_dataloader = MyAudioLoader(train_datasets, batch_size=32, drop_last=True,sampler=train_sampler)
 criterion = nn.CTCLoss(blank=0, reduction="mean")
 decoder = GreedyDecoder(labels_path)
-
+# scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
+#         factor=0.1,patience=2,min_lr=1e-4,verbose=True)
+scheduler = torch.optim.lr_scheduler.MultiStepLR(optim,[10,25,40],gamma=0.1)
+# scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optim,2*3*len(train_dataloader)//32,eta_min=1e-5)
 # model = model.to(device=device)
 summary(model,[(64,512),(1,)],device="cuda") # 探测模型结构
 
@@ -150,7 +150,7 @@ for epoch in range(end_epoch, 200):
         with amp.scale_loss(loss, optim) as scaled_loss:
             scaled_loss.backward()
         optim.step()
-        scheduler.step() # avg_loss
+        # scheduler.step() # avg_loss
         trans_pre = decoder.decode(out)
         ground_trues = []
         start = 0
@@ -176,6 +176,7 @@ for epoch in range(end_epoch, 200):
             print("avg wer:{}".format(wer, '0.2f'))
             print("trues: "+ground_trues[0])
             print("preds: "+trans_pre[0][0][0])
+            print("lr= "+str(scheduler.get_last_lr()))
             checkpoint = {
                 'model': model.state_dict(),
                 'optimizer': optim.state_dict(),
@@ -185,6 +186,7 @@ for epoch in range(end_epoch, 200):
             }
             torch.save(checkpoint,'checkpoint/epoch%s-wer%.2f-cer%.2f.pt' % (epoch,wer,cer))
             shutil.copy('checkpoint/epoch%s-wer%.2f-cer%.2f.pt' % (epoch,wer,cer),'checkpoint/latest.pt')
+    scheduler.step()
     with torch.no_grad():
         avg_loss,avg_wer, avg_cer = evalute(model, dev_dataloader, device)
         stat.append(epoch,avg_loss,avg_wer,avg_cer)
