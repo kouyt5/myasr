@@ -38,14 +38,14 @@ class MyAudioDataset(Dataset):
         y = torchaudio.transforms.AmplitudeToDB(stype="power")(spec)
 
         # F-T mask
-        audio_f_mask = torchaudio.transforms.FrequencyMasking(freq_mask_param=14)
-        audio_t_mask = torchaudio.transforms.TimeMasking(time_mask_param=40)
-        # 归一化
-        std, mean = torch.std_mean(y)
-        y = torch.div((y-mean), std)
+        audio_f_mask = torchaudio.transforms.FrequencyMasking(freq_mask_param=10)
+        audio_t_mask = torchaudio.transforms.TimeMasking(time_mask_param=30)
         if mask:
             y = audio_f_mask(y)
             y = audio_t_mask(y)
+        # 归一化
+        std, mean = torch.std_mean(y)
+        y = torch.div((y-mean), std)
         return y  # (1,64,T)
 
     def id2txt(self, id_list):
