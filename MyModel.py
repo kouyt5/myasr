@@ -5,13 +5,13 @@ import math
 
 
 class SeprationConv(nn.Module):
-    def __init__(self, in_ch, out_ch, k=33,last=False,mask=True,dilation=1):
+    def __init__(self, in_ch, out_ch, k=33,last=False,mask=True,dilation=1,stride=1):
         super(SeprationConv,self).__init__()
         self.last = last
         self.mask = mask
-        self.depthwise_conv = nn.Conv1d(in_ch, in_ch, kernel_size=k, stride=1,
+        self.depthwise_conv = nn.Conv1d(in_ch, in_ch, kernel_size=k, stride=stride,
                       padding= k // 2, groups=in_ch,dilation=dilation)
-        self.pointwise_conv = nn.Conv1d(in_ch, out_ch, kernel_size=1, stride=1)
+        self.pointwise_conv = nn.Conv1d(in_ch, out_ch, kernel_size=1, stride=stride)
         self.bn = nn.BatchNorm1d(out_ch)
         self.relu = nn.ReLU()
         self.maskcnn = MaskCNN()
@@ -73,8 +73,11 @@ class QuartNet(nn.Module):
             nn.BatchNorm1d(256),
             nn.ReLU(),
         )
+        self.first_cnn = SeprationConv(64,256,33,stride=2,mask=True)
         self.block1 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=33)
+        self.block12 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=33) # add layer
         self.block2 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=39)
+        self.block22 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=39) # add layer
         self.block3 = QuartNetBlock(repeat=5,in_ch=256,out_ch=512,k=51)
         self.block4 = QuartNetBlock(repeat=5,in_ch=512,out_ch=512,k=63)
         self.block5 = QuartNetBlock(repeat=5,in_ch=512,out_ch=512,k=75)
@@ -104,9 +107,11 @@ class QuartNet(nn.Module):
     def forward(self, input, percents):
         # x = input.view(input.size(0),input.size(2),input.size(3))
         x = input.squeeze(dim=1).contiguous()
-        x = self.first_cnn(x)
+        x = self.first_cnn(x,percents)
         x = self.block1(x,percents)
+        x = self.block12(x,percents)
         x = self.block2(x,percents)
+        x = self.block22(x,percents)
         x = self.block3(x,percents)
         x = self.block4(x,percents)
         x = self.block5(x,percents)
