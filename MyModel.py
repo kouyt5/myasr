@@ -183,7 +183,7 @@ class MyModel2(nn.Module):
         x = x.transpose(1, 2)  # N*T*C
         # x = self.bn1(x)
         # x = self.fc(x)  # N*T*class
-        x = nn.functional.softmax(x, dim=-1)
+        x = nn.functional.log_softmax(x, dim=-1)
         return x
 
 

@@ -103,7 +103,7 @@ dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=True,sample
 train_datasets = MyAudioDataset(train_manifest_path, labels_path,max_duration=17,mask=True)
 train_sampler = ElasticDistributedSampler(train_datasets)
 train_dataloader = MyAudioLoader(train_datasets, batch_size=32, drop_last=True,sampler=train_sampler)
-criterion = nn.CTCLoss(blank=0, reduction="mean")
+criterion = nn.CTCLoss(blank=0, reduction="none")
 decoder = GreedyDecoder(labels_path)
 # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
 #         factor=0.1,patience=2,min_lr=1e-4,verbose=True)
@@ -146,6 +146,7 @@ for epoch in range(end_epoch, 200):
         t_lengths = torch.mul(out.size(1), percents).int()  # 输出实际长度
         loss = criterion(out.transpose(0, 1),
                          trans, t_lengths, trans_lengths)
+        loss = torch.mean(loss)
         optim.zero_grad()
         with amp.scale_loss(loss, optim) as scaled_loss:
             scaled_loss.backward()
