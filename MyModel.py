@@ -75,9 +75,9 @@ class QuartNet(nn.Module):
         )
         self.first_cnn = SeprationConv(64,256,33,stride=2,mask=True)
         self.block1 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=33)
-        self.block12 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=33) # add layer
+        # self.block12 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=33) # add layer
         self.block2 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=39)
-        self.block22 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=39) # add layer
+        # self.block22 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=39) # add layer
         self.block3 = QuartNetBlock(repeat=5,in_ch=256,out_ch=512,k=51)
         self.block4 = QuartNetBlock(repeat=5,in_ch=512,out_ch=512,k=63)
         self.block5 = QuartNetBlock(repeat=5,in_ch=512,out_ch=512,k=75)
@@ -109,9 +109,9 @@ class QuartNet(nn.Module):
         x = input.squeeze(dim=1).contiguous()
         x = self.first_cnn(x,percents)
         x = self.block1(x,percents)
-        x = self.block12(x,percents)
+        # x = self.block12(x,percents)
         x = self.block2(x,percents)
-        x = self.block22(x,percents)
+        # x = self.block22(x,percents)
         x = self.block3(x,percents)
         x = self.block4(x,percents)
         x = self.block5(x,percents)
