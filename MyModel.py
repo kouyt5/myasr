@@ -9,7 +9,11 @@ class SeprationConv(nn.Module):
         super(SeprationConv,self).__init__()
         self.last = last
         self.mask = mask
-        self.depthwise_conv = nn.Conv1d(in_ch, in_ch, kernel_size=k, stride=stride,
+        if dilation > 1:
+            self.depthwise_conv = nn.Conv1d(in_ch, in_ch, kernel_size=k, stride=stride,
+                      padding= (dilation * k) // 2 - 1, groups=in_ch,dilation=dilation)
+        else:
+            self.depthwise_conv = nn.Conv1d(in_ch, in_ch, kernel_size=k, stride=stride,
                       padding= k // 2, groups=in_ch,dilation=dilation)
         self.pointwise_conv = nn.Conv1d(in_ch, out_ch, kernel_size=1, stride=stride)
         self.bn = nn.BatchNorm1d(out_ch)
@@ -67,12 +71,12 @@ class QuartNetBlock(nn.Module):
 class QuartNet(nn.Module):
     def __init__(self):
         super(QuartNet,self).__init__()
-        self.first_cnn = nn.Sequential(
-            nn.Conv1d(64, 256, kernel_size= 33, stride=2,
-                      padding=16),
-            nn.BatchNorm1d(256),
-            nn.ReLU(),
-        )
+        # self.first_cnn = nn.Sequential(
+        #     nn.Conv1d(64, 256, kernel_size= 33, stride=2,
+        #               padding=16),
+        #     nn.BatchNorm1d(256),
+        #     nn.ReLU(),
+        # )
         self.first_cnn = SeprationConv(64,256,33,stride=2,mask=True)
         self.block1 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=33)
         # self.block12 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=33) # add layer
@@ -90,14 +94,14 @@ class QuartNet(nn.Module):
         #     nn.ReLU(),
         # )
         # self.last_cnn = QuartNetBlock(repeat=1,in_ch=512,out_ch=512,k=87,mask=False)
-        # self.last_cnn = SeprationConv(512,512,k=87,last=False,mask=False,dilation=2)
-        self.last_cnn = nn.Sequential(
-            nn.Conv1d(512, 512, kernel_size= 87, stride=1, groups=512,dilation=1,
-                padding=87//2),
-            nn.Conv1d(512, 512, kernel_size=1, stride=1),
-            nn.BatchNorm1d(512),
-            nn.ReLU(),
-        )
+        self.last_cnn = SeprationConv(512,512,k=87,last=False,mask=False,dilation=2)
+        # self.last_cnn = nn.Sequential(
+        #     nn.Conv1d(512, 512, kernel_size= 87, stride=1, groups=512,dilation=1,
+        #         padding=87//2),
+        #     nn.Conv1d(512, 512, kernel_size=1, stride=1),
+        #     nn.BatchNorm1d(512),
+        #     nn.ReLU(),
+        # )
         self.last_cnn2 = nn.Sequential(
             nn.Conv1d(512, 1024, kernel_size= 1, stride=1),
             nn.BatchNorm1d(1024),
@@ -115,7 +119,7 @@ class QuartNet(nn.Module):
         x = self.block3(x,percents)
         x = self.block4(x,percents)
         x = self.block5(x,percents)
-        x = self.last_cnn(x)
+        x = self.last_cnn(x,percents)
         x = self.last_cnn2(x)
         return x
 class BatchLSTM(nn.Module):
@@ -163,9 +167,7 @@ class MyModel2(nn.Module):
                 self.labels.append(c.replace('\n',''))
         self.cnn = QuartNet()
         self.last_cnn3 = nn.Sequential(
-            nn.Conv1d(1024, len(self.labels), kernel_size=1, stride=1,dilation=1),
-            nn.BatchNorm1d(len(self.labels)),
-            nn.ReLU(),
+            nn.Conv1d(1024, len(self.labels), kernel_size=1, stride=1,dilation=1)
         )
         # self.rnn = BatchLSTM(64*128,128,True,True)
         # self.bn1 = nn.BatchNorm1d(256)
