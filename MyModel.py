@@ -94,7 +94,7 @@ class QuartNet(nn.Module):
         #     nn.ReLU(),
         # )
         # self.last_cnn = QuartNetBlock(repeat=1,in_ch=512,out_ch=512,k=87,mask=False)
-        self.last_cnn = SeprationConv(512,512,k=87,last=False,mask=False,dilation=2)
+        self.last_cnn = SeprationConv(512,512,k=87,last=False,mask=True,dilation=2)
         # self.last_cnn = nn.Sequential(
         #     nn.Conv1d(512, 512, kernel_size= 87, stride=1, groups=512,dilation=1,
         #         padding=87//2),
@@ -183,7 +183,7 @@ class MyModel2(nn.Module):
         x = x.transpose(1, 2)  # N*T*C
         # x = self.bn1(x)
         # x = self.fc(x)  # N*T*class
-        x = nn.functional.log_softmax(x, dim=-1)
+        x = nn.functional.softmax(x, dim=-1)
         return x
 
 

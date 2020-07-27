@@ -164,7 +164,7 @@ for epoch in range(end_epoch, 200):
         wer_list_pairs.extend([(ground_trues[i], trans_pre[0][i][0])
                           for i in range(len(trans_lengths))])
         total_loss += loss.item()
-        if total_count % 40 == 0:
+        if total_count % 50 == 0:
             try:
                 wer = metrics.compute_wer_list_pair(wer_list_pairs)
                 cer = metrics.calculate_cer_list_pair(cer_list_pairs)
@@ -184,8 +184,8 @@ for epoch in range(end_epoch, 200):
                 'scheduler': scheduler.state_dict(),
                 'epoch': epoch
             }
-            torch.save(checkpoint,'checkpoint/epoch%s-wer%.2f-cer%.2f.pt' % (epoch,wer,cer))
-            shutil.copy('checkpoint/epoch%s-wer%.2f-cer%.2f.pt' % (epoch,wer,cer),'checkpoint/latest.pt')
+            torch.save(checkpoint,'checkpoint/epoch%s-wer%.2f.pt' % (epoch,wer))
+            shutil.copy('checkpoint/epoch%s-wer%.2f.pt' % (epoch,wer),'checkpoint/latest.pt')
     scheduler.step()
     with torch.no_grad():
         avg_loss,avg_wer, avg_cer = evalute(model, dev_dataloader, device)
