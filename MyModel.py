@@ -71,13 +71,13 @@ class QuartNetBlock(nn.Module):
 class QuartNet(nn.Module):
     def __init__(self):
         super(QuartNet,self).__init__()
-        # self.first_cnn = nn.Sequential(
-        #     nn.Conv1d(64, 256, kernel_size= 33, stride=2,
-        #               padding=16),
-        #     nn.BatchNorm1d(256),
-        #     nn.ReLU(),
-        # )
-        self.first_cnn = SeprationConv(64,256,33,stride=2,mask=True)
+        self.first_cnn = nn.Sequential(
+            nn.Conv1d(64, 256, kernel_size= 33, stride=2,
+                      padding=16),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+        )
+        # self.first_cnn = SeprationConv(64,256,33,stride=2,mask=True)
         self.block1 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=33)
         # self.block12 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=33) # add layer
         self.block2 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=39)
@@ -111,7 +111,7 @@ class QuartNet(nn.Module):
     def forward(self, input, percents):
         # x = input.view(input.size(0),input.size(2),input.size(3))
         x = input.squeeze(dim=1).contiguous()
-        x = self.first_cnn(x,percents)
+        x = self.first_cnn(x)
         x = self.block1(x,percents)
         # x = self.block12(x,percents)
         x = self.block2(x,percents)

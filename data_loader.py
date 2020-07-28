@@ -98,6 +98,48 @@ class MyAudioLoader(DataLoader):
         targets = torch.IntTensor(targets)
         return inputs, targets, input_percentages, target_sizes, paths
 
+class H5Wav2Vec(Dataset):
+    def __init__(self, manifest_path, labels_path, max_duration=16,mask=False):
+        self.mask = mask
+        self.datasets = []
+        self.labels = {}
+        with open(manifest_path, encoding='utf-8') as f:
+            for line in f.readlines():
+                data = json.loads(line, encoding='utf-8')
+                if data['duration'] > max_duration:
+                    continue
+                self.datasets.append(data)
+        with open(labels_path, encoding='utf-8') as f:
+            idx = [char.replace('\n', '') for char in f.readlines()]
+            self.index2char = dict([(i, idx[i]) for i in range(len(idx))])
+            self.char2index = dict([(idx[i], i) for i in range(len(idx))])
+
+    def __getitem__(self, index):
+        data = self.datasets[index]
+        text2id = [self.char2index[char] for char in data['text']]
+        return self.parse_audio(data["audio_filepath"],mask=self.mask), text2id, data['audio_filepath']
+
+    def parse_audio(self, audio_path, win_len=0.02,mask=False):
+        if not os.path.exists(path=audio_path):
+            raise("音频路径不存在 "+ audio_path)
+        y, sr = torchaudio.load(audio_path)
+        n_fft = int(win_len * sr)
+        hop_length = n_fft // 2
+        transformer = torchaudio.transforms.MelSpectrogram(sr, n_fft=n_fft,
+                                                           hop_length=hop_length, n_mels=64)
+        spec = transformer(y)
+        y = torchaudio.transforms.AmplitudeToDB(stype="power")(spec)
+
+        # F-T mask
+        audio_f_mask = torchaudio.transforms.FrequencyMasking(freq_mask_param=10)
+        audio_t_mask = torchaudio.transforms.TimeMasking(time_mask_param=30)
+        if mask:
+            y = audio_f_mask(y)
+            y = audio_t_mask(y)
+        # 归一化
+        std, mean = torch.std_mean(y)
+        y = torch.div((y-mean), std)
+        return y  # (1,64,T)
 if __name__ == "__main__":
     manifest_path = "./data/dev-clean.json"
     labels_path = "./data/labels.txt"

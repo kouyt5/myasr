@@ -107,7 +107,7 @@ criterion = nn.CTCLoss(blank=0, reduction="mean")
 decoder = GreedyDecoder(labels_path)
 # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
 #         factor=0.1,patience=2,min_lr=1e-4,verbose=True)
-scheduler = torch.optim.lr_scheduler.MultiStepLR(optim,[15,25,40],gamma=0.1)
+scheduler = torch.optim.lr_scheduler.MultiStepLR(optim,[20,35,45],gamma=0.1)
 # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optim,2*3*len(train_dataloader)//32,eta_min=1e-5)
 # model = model.to(device=device)
 summary(model,[(64,512),(1,)],device="cuda") # 探测模型结构
