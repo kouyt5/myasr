@@ -124,7 +124,8 @@ class APCDataset(Dataset):
 
     def parse_audio(self, audio_path):
         if not os.path.exists(path=audio_path):
-            raise("h5文件路径不存在 "+ audio_path)
+            print(audio_path)
+            raise("文件路径不存在 ")
         y = torch.load(audio_path)
         y = torch.transpose(y,1,2)
         return y
@@ -132,7 +133,7 @@ class APCDataset(Dataset):
         #     data = f['features']
         #     y = torch.Tensor(data.value)
 
-        return y  # (1,64,T)
+        return y  # (1,512,T)
     
     def __len__(self):
         return len(self.datasets)

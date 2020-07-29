@@ -71,12 +71,13 @@ class QuartNetBlock(nn.Module):
 class QuartNet(nn.Module):
     def __init__(self):
         super(QuartNet,self).__init__()
-        self.first_cnn = nn.Sequential(
-            nn.Conv1d(64, 256, kernel_size= 33, stride=2,
-                      padding=16),
-            nn.BatchNorm1d(256),
-            nn.ReLU(),
-        )
+        # self.first_cnn = nn.Sequential(
+        #     nn.Conv1d(512, 256, kernel_size= 33, stride=2,
+        #               padding=16),
+        #     nn.BatchNorm1d(256),
+        #     nn.ReLU(),
+        # )
+        self.first_cnn = SeprationConv(512,256,k=33,last=False,mask=False,dilation=1,stride=2)
         # self.first_cnn = SeprationConv(64,256,33,stride=2,mask=True)
         self.block1 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=33)
         # self.block12 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=33) # add layer
@@ -111,7 +112,7 @@ class QuartNet(nn.Module):
     def forward(self, input, percents):
         # x = input.view(input.size(0),input.size(2),input.size(3))
         x = input.squeeze(dim=1).contiguous()
-        x = self.first_cnn(x)
+        x = self.first_cnn(x,percents)
         x = self.block1(x,percents)
         # x = self.block12(x,percents)
         x = self.block2(x,percents)
@@ -217,7 +218,7 @@ class MaskCNN(nn.Module):
         return x
 
 if __name__ == "__main__":
-    input = torch.rand([8, 1, 64, 512], dtype=torch.float32)
+    input = torch.rand([8, 1, 512, 512], dtype=torch.float32)
     percents = torch.rand([8], dtype=torch.float32)
     model = MyModel2("/mnt/volume/workspace/datasets/aishell/data_aishell/labels.txt")
     out = model(input, percents)

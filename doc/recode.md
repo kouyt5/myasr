@@ -211,3 +211,22 @@ examples2_1  | eval avg wer:0.6495117673804317
 examples2_1  | trues: the physician who attended him was named terro he thought by some peculiar train of reasoning that he could cure him by applying a mercurial ointment to the chest to which no one raised any objection
 examples2_1  | preds: e positieon who atenden him was the m terril he thought i some becu your tran o reasoning that he could cur him by apliing am mecurial otemento the cast to itch no an rased any ajection
   2%|▏         | 19/890 [00:35<27:11,  1.87s/it]epoch8avg loss: 0.7327426344156265
+
+# 使用apc train-100
+epoch=0
+examples2_1  | eval avg loss: 0.7168900566015258
+examples2_1  | eval avg cer:0.23370287805024342
+examples2_1  | eval avg wer:0.6269283195222743
+epoch=1
+examples2_1  | eval avg loss: 0.5909920471001865
+examples2_1  | eval avg cer:0.19250147451341057
+examples2_1  | eval avg wer:0.5416387200069236
+
+examples2_1  | eval avg loss: 0.5420571005493635
+examples2_1  | eval avg cer:0.17388261873581717
+examples2_1  | eval avg wer:0.505203487743136
+
+epoch=7
+examples2_1  | eval avg loss: 0.4427800148445676
+examples2_1  | eval avg cer:0.138604260594004
+examples2_1  | eval avg wer:0.4014366386118263
