@@ -9,9 +9,8 @@ from ASR_metrics import utils as metrics
 from apex import amp
 import apex
 from torchsummary import summary
-from torch.nn.parallel import DistributedDataParallel
-# from apex.parallel import DistributedDataParallel
-from torchelastic.utils.data import ElasticDistributedSampler
+# from torch.nn.parallel import DistributedDataParallel
+from apex.parallel import DistributedDataParallel
 import torch.distributed as dist
 from datetime import timedelta
 from ruamel.yaml import YAML
@@ -22,6 +21,7 @@ parser = argparse.ArgumentParser(description='asr distribution training')
 parser.add_argument('--lr',default=1e-1,type=float,help='学习率')
 parser.add_argument('--checkpoint_path',type=str,help='checkpoint文件位置')
 parser.add_argument('--continue_learning',action="store_true",help='continue_learning')
+parser.add_argument('--dist',action="store_true",help='distribution training')
 args = parser.parse_args()
 
 def set_lr(optimizer,lr,weigth_decay):
@@ -71,14 +71,16 @@ def evalute(model, loader, device):
     print("preds: "+trans_pre[0][0][0])
     return total_loss/total_count, wer, cer
 
-# dist
-device_id = int(os.environ["LOCAL_RANK"])
-torch.cuda.set_device(device_id)
-print(f"=> set cuda device = {device_id}")
-os.environ["NCCL_BLOCKING_WAIT"] = "1"
-dist.init_process_group(
-    backend="nccl", init_method="env://", timeout=timedelta(seconds=30)
-)
+if args.dist:
+    from torchelastic.utils.data import ElasticDistributedSampler
+    # dist
+    device_id = int(os.environ["LOCAL_RANK"])
+    torch.cuda.set_device(device_id)
+    print(f"=> set cuda device = {device_id}")
+    os.environ["NCCL_BLOCKING_WAIT"] = "1"
+    dist.init_process_group(
+        backend="nccl", init_method="env://", timeout=timedelta(seconds=30)
+    )
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 config_path = "conf.yaml"
@@ -92,21 +94,25 @@ model.to("cuda")
 # 使用Adam无法收敛，SGD比较好调整
 optim = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, nesterov=True,weight_decay=1e-4)
 # optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5, amsgrad=True)
-#分布式 batch normal
-model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
+# if args.dist:
+#     #分布式 batch normal
+#     model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
 # apex 混合精度加速训练
 opt_level = 'O1'
 model, optim = amp.initialize(model, optim, opt_level=opt_level)
-# dist
-# model = DistributedDataParallel(model, device_ids=[device_id])
-model = DistributedDataParallel(model,device_ids=[0])
-# model = apex.parallel.convert_syncbn_model(model)
+
+val_sample = None
+train_sampler = None
 dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
-val_sample = ElasticDistributedSampler(dev_datasets)
-dev_dataloader = MyAudioLoader(dev_datasets, batch_size=16, drop_last=True,sampler=val_sample)
 train_datasets = MyAudioDataset(train_manifest_path, labels_path,max_duration=17,mask=True)
-train_sampler = ElasticDistributedSampler(train_datasets)
-train_dataloader = MyAudioLoader(train_datasets, batch_size=12, drop_last=True,sampler=train_sampler)
+if args.dist:
+    # dist
+    model = DistributedDataParallel(model) #,device_ids=[device_id]
+    train_sampler = ElasticDistributedSampler(train_datasets)
+    val_sample = ElasticDistributedSampler(dev_datasets)
+    # model = apex.parallel.convert_syncbn_model(model) # 效率太低
+dev_dataloader = MyAudioLoader(dev_datasets, batch_size=16, drop_last=True,sampler=val_sample)
+train_dataloader = MyAudioLoader(train_datasets, batch_size=32, drop_last=True,sampler=train_sampler)
 criterion = nn.CTCLoss(blank=0, reduction="mean")
 decoder = GreedyDecoder(labels_path)
 # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
