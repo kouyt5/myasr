@@ -167,7 +167,7 @@ class MyModel2(nn.Module):
                 self.labels.append(c.replace('\n',''))
         self.cnn = QuartNet()
         self.last_cnn3 = nn.Sequential(
-            nn.Conv1d(1024, len(self.labels), kernel_size=1, stride=1,dilation=2), # 空洞率2较好 cer=0.98-->0.53(dila=1)
+            nn.Conv1d(1024, len(self.labels), kernel_size=1, stride=1,dilation=1), # 空洞率2较好 cer=0.98-->0.53(dila=1)
             nn.BatchNorm1d(len(self.labels)),
             nn.ReLU(),
         )

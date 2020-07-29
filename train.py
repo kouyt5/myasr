@@ -9,8 +9,8 @@ from ASR_metrics import utils as metrics
 from apex import amp
 import apex
 from torchsummary import summary
-# from torch.nn.parallel import DistributedDataParallel
-from apex.parallel import DistributedDataParallel
+from torch.nn.parallel import DistributedDataParallel
+# from apex.parallel import DistributedDataParallel
 import torch.distributed as dist
 from datetime import timedelta
 from ruamel.yaml import YAML
@@ -94,9 +94,9 @@ model.to("cuda")
 # 使用Adam无法收敛，SGD比较好调整
 optim = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, nesterov=True,weight_decay=1e-4)
 # optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5, amsgrad=True)
-# if args.dist:
-#     #分布式 batch normal
-#     model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
+if args.dist:
+    #分布式 batch normal
+    model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
 # apex 混合精度加速训练
 opt_level = 'O1'
 model, optim = amp.initialize(model, optim, opt_level=opt_level)
@@ -107,12 +107,12 @@ dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
 train_datasets = MyAudioDataset(train_manifest_path, labels_path,max_duration=17,mask=True)
 if args.dist:
     # dist
-    model = DistributedDataParallel(model) #,device_ids=[device_id]
+    model = DistributedDataParallel(model, device_ids=[device_id]) #,device_ids=[device_id]
     train_sampler = ElasticDistributedSampler(train_datasets)
     val_sample = ElasticDistributedSampler(dev_datasets)
     # model = apex.parallel.convert_syncbn_model(model) # 效率太低
 dev_dataloader = MyAudioLoader(dev_datasets, batch_size=16, drop_last=True,sampler=val_sample)
-train_dataloader = MyAudioLoader(train_datasets, batch_size=32, drop_last=True,sampler=train_sampler)
+train_dataloader = MyAudioLoader(train_datasets, batch_size=32, drop_last=True,sampler=train_sampler, shuffle=False if args.dist else True)
 criterion = nn.CTCLoss(blank=0, reduction="mean")
 decoder = GreedyDecoder(labels_path)
 # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
