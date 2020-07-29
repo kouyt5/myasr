@@ -103,10 +103,10 @@ model = DistributedDataParallel(model,device_ids=[0])
 # model = apex.parallel.convert_syncbn_model(model)
 dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
 val_sample = ElasticDistributedSampler(dev_datasets)
-dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=True,sampler=val_sample)
+dev_dataloader = MyAudioLoader(dev_datasets, batch_size=16, drop_last=True,sampler=val_sample)
 train_datasets = MyAudioDataset(train_manifest_path, labels_path,max_duration=17,mask=True)
 train_sampler = ElasticDistributedSampler(train_datasets)
-train_dataloader = MyAudioLoader(train_datasets, batch_size=32, drop_last=True,sampler=train_sampler)
+train_dataloader = MyAudioLoader(train_datasets, batch_size=12, drop_last=True,sampler=train_sampler)
 criterion = nn.CTCLoss(blank=0, reduction="mean")
 decoder = GreedyDecoder(labels_path)
 # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
@@ -168,7 +168,7 @@ for epoch in range(end_epoch, 200):
         wer_list_pairs.extend([(ground_trues[i], trans_pre[0][i][0])
                           for i in range(len(trans_lengths))])
         total_loss += loss.item()
-        if total_count % 50 == 0:
+        if total_count % 100 == 0:
             try:
                 wer = metrics.compute_wer_list_pair(wer_list_pairs)
                 cer = metrics.calculate_cer_list_pair(cer_list_pairs)
