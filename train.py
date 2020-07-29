@@ -100,7 +100,7 @@ model, optim = amp.initialize(model, optim, opt_level=opt_level)
 # dist
 # model = DistributedDataParallel(model, device_ids=[device_id])
 model = DistributedDataParallel(model)
-model = apex.parallel.convert_syncbn_model(model)
+# model = apex.parallel.convert_syncbn_model(model)
 dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
 val_sample = ElasticDistributedSampler(dev_datasets)
 dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=True,sampler=val_sample)
