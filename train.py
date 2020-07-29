@@ -9,8 +9,8 @@ from ASR_metrics import utils as metrics
 from apex import amp
 import apex
 from torchsummary import summary
-# from torch.nn.parallel import DistributedDataParallel
-from apex.parallel import DistributedDataParallel
+from torch.nn.parallel import DistributedDataParallel
+# from apex.parallel import DistributedDataParallel
 from torchelastic.utils.data import ElasticDistributedSampler
 import torch.distributed as dist
 from datetime import timedelta
@@ -99,7 +99,7 @@ opt_level = 'O1'
 model, optim = amp.initialize(model, optim, opt_level=opt_level)
 # dist
 # model = DistributedDataParallel(model, device_ids=[device_id])
-model = DistributedDataParallel(model)
+model = DistributedDataParallel(model,device_ids=[0])
 # model = apex.parallel.convert_syncbn_model(model)
 dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
 val_sample = ElasticDistributedSampler(dev_datasets)
