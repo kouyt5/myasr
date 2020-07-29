@@ -211,3 +211,5 @@ examples2_1  | eval avg wer:0.6495117673804317
 examples2_1  | trues: the physician who attended him was named terro he thought by some peculiar train of reasoning that he could cure him by applying a mercurial ointment to the chest to which no one raised any objection
 examples2_1  | preds: e positieon who atenden him was the m terril he thought i some becu your tran o reasoning that he could cur him by apliing am mecurial otemento the cast to itch no an rased any ajection
   2%|▏         | 19/890 [00:35<27:11,  1.87s/it]epoch8avg loss: 0.7327426344156265
+
+分布式训练不能达到单机训练的精度，考虑同步bn和warmup

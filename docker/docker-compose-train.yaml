@@ -8,7 +8,7 @@ services:
       - /mnt/volume/workspace/datasets:/mnt/volume/workspace/datasets
     #   - /mnt/volume/workspace/datasets:/mnt/volume/workspace/datasets
     working_dir: /mnt/volume/workspace/myasr
-    command:  --nnodes=2 --nproc_per_node=1 --rdzv_id=2 --rdzv_endpoint=192.168.1.108 train.py --lr 0.1 --checkpoint_path 'checkpoint/latest.pt' #--continue_learning
+    command:  --nnodes=3 --nproc_per_node=1 --rdzv_id=2 --rdzv_endpoint=192.168.1.108 train.py --lr 0.1 --checkpoint_path 'checkpoint/latest.pt' #--continue_learning
     environment: 
       - NVIDIA_VISIBLE_DEVICES=all
     runtime: nvidia
