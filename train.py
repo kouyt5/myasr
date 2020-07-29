@@ -9,8 +9,8 @@ from ASR_metrics import utils as metrics
 from apex import amp
 import apex
 from torchsummary import summary
-# from torch.nn.parallel import DistributedDataParallel
-from apex.parallel import DistributedDataParallel
+from torch.nn.parallel import DistributedDataParallel
+# from apex.parallel import DistributedDataParallel
 from torchelastic.utils.data import ElasticDistributedSampler
 import torch.distributed as dist
 from datetime import timedelta
@@ -98,12 +98,12 @@ model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
 opt_level = 'O1'
 model, optim = amp.initialize(model, optim, opt_level=opt_level)
 # dist
-# model = DistributedDataParallel(model, device_ids=[device_id])
-model = DistributedDataParallel(model)
-model = apex.parallel.convert_syncbn_model(model)
+model = DistributedDataParallel(model, device_ids=[device_id])
+# model = DistributedDataParallel(model)
+# model = apex.parallel.convert_syncbn_model(model)
 # dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
-dev_file_path = "/mnt/volume/workspace/Autoregressive-Predictive-Coding/extra/dev_clean"
-train_file_path = "/mnt/volume/workspace/Autoregressive-Predictive-Coding/extra/train_clean_100"
+dev_file_path = "/mnt/volume/workspace/datasets/librispeech/apc/extra/dev_clean"
+train_file_path = "/mnt/volume/workspace/datasets/librispeech/apc/extra/train_clean_100"
 dev_datasets = APCDataset(dev_manifest_path, labels_path, h5_file_path=dev_file_path)
 val_sample = ElasticDistributedSampler(dev_datasets)
 dev_dataloader = MyAudioLoader(dev_datasets, batch_size=8, drop_last=True,sampler=val_sample)
@@ -115,7 +115,7 @@ criterion = nn.CTCLoss(blank=0, reduction="mean")
 decoder = GreedyDecoder(labels_path)
 # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
 #         factor=0.1,patience=2,min_lr=1e-4,verbose=True)
-scheduler = torch.optim.lr_scheduler.MultiStepLR(optim,[15,25,35],gamma=0.1)
+scheduler = torch.optim.lr_scheduler.MultiStepLR(optim,[10,15,25],gamma=0.1)
 # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optim,2*3*len(train_dataloader)//32,eta_min=1e-5)
 # model = model.to(device=device)
 summary(model,[(512,512),(1,)],device="cuda") # 探测模型结构
