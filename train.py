@@ -7,6 +7,7 @@ from decoder import GreedyDecoder
 from tqdm import tqdm
 from ASR_metrics import utils as metrics
 from apex import amp
+import apex
 from torchsummary import summary
 # from torch.nn.parallel import DistributedDataParallel
 from apex.parallel import DistributedDataParallel
@@ -91,12 +92,15 @@ model.to("cuda")
 # 使用Adam无法收敛，SGD比较好调整
 optim = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, nesterov=True,weight_decay=1e-4)
 # optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5, amsgrad=True)
+#分布式 batch normal
+model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
 # apex 混合精度加速训练
 opt_level = 'O1'
 model, optim = amp.initialize(model, optim, opt_level=opt_level)
 # dist
 # model = DistributedDataParallel(model, device_ids=[device_id])
 model = DistributedDataParallel(model)
+model = apex.parallel.convert_syncbn_model(model)
 dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
 val_sample = ElasticDistributedSampler(dev_datasets)
 dev_dataloader = MyAudioLoader(dev_datasets, batch_size=4, drop_last=True,sampler=val_sample)
