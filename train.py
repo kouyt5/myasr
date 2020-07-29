@@ -23,7 +23,7 @@ parser.add_argument('--checkpoint_path',type=str,help='checkpoint文件位置')
 parser.add_argument('--continue_learning',action="store_true",help='continue_learning')
 parser.add_argument('--dist',action="store_true",help='distribution training')
 args = parser.parse_args()
-
+torch.manual_seed(114)
 def set_lr(optimizer,lr,weigth_decay):
     for param in optimizer.param_groups:
         param['lr'] = lr
