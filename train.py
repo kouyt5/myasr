@@ -7,6 +7,7 @@ from decoder import GreedyDecoder
 from tqdm import tqdm
 from ASR_metrics import utils as metrics
 from apex import amp
+import apex
 from torchsummary import summary
 # from torch.nn.parallel import DistributedDataParallel
 from apex.parallel import DistributedDataParallel
