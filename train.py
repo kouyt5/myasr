@@ -90,7 +90,7 @@ labels_path = params['datasets']['label']
 model = MyModel2(labels_path)
 model.to("cuda")
 # 使用Adam无法收敛，SGD比较好调整
-optim = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, nesterov=True,weight_decay=1e-4)
+optim = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, nesterov=True,weight_decay=1e-5)
 # optim = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=1e-5, amsgrad=True)
 #分布式 batch normal
 model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
@@ -102,23 +102,25 @@ model = DistributedDataParallel(model, device_ids=[device_id])
 # model = DistributedDataParallel(model)
 # model = apex.parallel.convert_syncbn_model(model)
 # dev_datasets = MyAudioDataset(dev_manifest_path, labels_path)
-dev_file_path = "/mnt/volume/workspace/datasets/librispeech/apc/extra/dev_clean"
-train_file_path = "/mnt/volume/workspace/datasets/librispeech/apc/extra/train_clean_100"
+# dev_file_path = "/mnt/volume/workspace/datasets/librispeech/apc/extra/dev_clean"
+dev_file_path = "/mnt/volume/workspace/datasets/librispeech/apc/PIL.h5"
+train_file_path = "/mnt/volume/workspace/datasets/librispeech/apc/PIL.h5"
+# train_file_path = "/mnt/volume/workspace/datasets/librispeech/apc/extra/train_clean_100"
 dev_datasets = APCDataset(dev_manifest_path, labels_path, h5_file_path=dev_file_path)
 val_sample = ElasticDistributedSampler(dev_datasets)
 dev_dataloader = MyAudioLoader(dev_datasets, batch_size=8, drop_last=True,sampler=val_sample)
 # train_datasets = MyAudioDataset(train_manifest_path, labels_path,max_duration=17,mask=True)
 train_datasets = APCDataset(train_manifest_path, labels_path,max_duration=17,mask=False,h5_file_path=train_file_path)
 train_sampler = ElasticDistributedSampler(train_datasets)
-train_dataloader = MyAudioLoader(train_datasets, batch_size=32, drop_last=True,sampler=train_sampler)
+train_dataloader = MyAudioLoader(train_datasets, batch_size=64, drop_last=True,sampler=train_sampler)
 criterion = nn.CTCLoss(blank=0, reduction="mean")
 decoder = GreedyDecoder(labels_path)
 # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
 #         factor=0.1,patience=2,min_lr=1e-4,verbose=True)
-scheduler = torch.optim.lr_scheduler.MultiStepLR(optim,[10,15,25],gamma=0.1)
+scheduler = torch.optim.lr_scheduler.MultiStepLR(optim,[15,25,35],gamma=0.1)
 # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optim,2*3*len(train_dataloader)//32,eta_min=1e-5)
 # model = model.to(device=device)
-summary(model,[(512,512),(1,)],device="cuda") # 探测模型结构
+summary(model,[(256,512),(1,)],device="cuda") # 探测模型结构
 
 end_epoch = 0
 if args.continue_learning:
@@ -197,5 +199,5 @@ for epoch in range(end_epoch, 200):
     scheduler.step()
     with torch.no_grad():
         avg_loss,avg_wer, avg_cer = evalute(model, dev_dataloader, device)
-        stat.append(epoch,avg_loss,avg_wer,avg_cer)
-        vis.update(stat.get_len(),stat)
+    #     stat.append(epoch,avg_loss,avg_wer,avg_cer)
+    #     vis.update(stat.get_len(),stat)

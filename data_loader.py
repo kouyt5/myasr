@@ -4,7 +4,7 @@ from torch.utils.data import Dataset, DataLoader
 import json
 from tqdm import tqdm
 import os
-# import h5py
+import h5py
 
 class MyAudioDataset(Dataset):
     def __init__(self, manifest_path, labels_path, max_duration=16,mask=False):
@@ -104,13 +104,14 @@ class APCDataset(Dataset):
         self.mask = mask
         self.datasets = []
         self.labels = {}
+        self.h5 = h5py.File(h5_file_path,'r')
         with open(manifest_path, encoding='utf-8') as f:
             for line in f.readlines():
                 data = json.loads(line, encoding='utf-8')
                 if data['duration'] > max_duration:
                     continue
-                audio_name = data['audio_filepath'].split('/')[-1].split('.')[0] + ".pt"
-                data['audio_filepath'] = os.path.join(h5_file_path,audio_name)
+                audio_name = data['audio_filepath'].split('/')[-1].split('.')[0]
+                data['audio_filepath'] = audio_name
                 self.datasets.append(data)
         with open(labels_path, encoding='utf-8') as f:
             idx = [char.replace('\n', '') for char in f.readlines()]
@@ -123,17 +124,16 @@ class APCDataset(Dataset):
         return self.parse_audio(data["audio_filepath"]), text2id, data['audio_filepath']
 
     def parse_audio(self, audio_path):
-        if not os.path.exists(path=audio_path):
-            print(audio_path)
-            raise("文件路径不存在 ")
-        y = torch.load(audio_path)
-        y = torch.transpose(y,1,2)
-        return y
+        fea = self.h5[audio_path]
+        fea = torch.tensor(fea,dtype=torch.float32)
+        y = torch.transpose(fea,1,2)
+        return y #(1,256,T)
+        # return torch.randn([1,256,2048],dtype=torch.float32)
         # with h5py.File(file_path,'r') as f:
         #     data = f['features']
         #     y = torch.Tensor(data.value)
 
-        return y  # (1,512,T)
+        # return y  # (1,512,T)
     
     def __len__(self):
         return len(self.datasets)
@@ -141,7 +141,8 @@ class APCDataset(Dataset):
 if __name__ == "__main__":
     manifest_path = "./data/dev-clean.json"
     labels_path = "./data/labels.txt"
-    h5_path = "/mnt/volume/workspace/Autoregressive-Predictive-Coding/extra/dev_clean"
+    # h5_path = "/mnt/volume/workspace/Autoregressive-Predictive-Coding/extra/dev_clean"
+    h5_path = "/mnt/volume/workspace/datasets/librispeech/apc/PIL.h5"
     dataset = MyAudioDataset(manifest_path, labels_path)
     apcdatasets = APCDataset(manifest_path, labels_path,h5_path)
     # datasets测试

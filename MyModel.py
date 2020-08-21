@@ -77,7 +77,7 @@ class QuartNet(nn.Module):
         #     nn.BatchNorm1d(256),
         #     nn.ReLU(),
         # )
-        self.first_cnn = SeprationConv(512,256,k=33,last=False,mask=False,dilation=1,stride=2)
+        self.first_cnn = SeprationConv(256,256,k=33,last=False,mask=False,dilation=1,stride=2)
         # self.first_cnn = SeprationConv(64,256,33,stride=2,mask=True)
         self.block1 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=33)
         # self.block12 = QuartNetBlock(repeat=5,in_ch=256,out_ch=256,k=33) # add layer
@@ -218,7 +218,7 @@ class MaskCNN(nn.Module):
         return x
 
 if __name__ == "__main__":
-    input = torch.rand([8, 1, 512, 512], dtype=torch.float32)
+    input = torch.rand([8, 1, 256, 512], dtype=torch.float32)
     percents = torch.rand([8], dtype=torch.float32)
     model = MyModel2("/mnt/volume/workspace/datasets/aishell/data_aishell/labels.txt")
     out = model(input, percents)
