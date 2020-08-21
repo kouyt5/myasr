@@ -112,7 +112,7 @@ dev_dataloader = MyAudioLoader(dev_datasets, batch_size=8, drop_last=True,sample
 # train_datasets = MyAudioDataset(train_manifest_path, labels_path,max_duration=17,mask=True)
 train_datasets = APCDataset(train_manifest_path, labels_path,max_duration=17,mask=False,h5_file_path=train_file_path)
 train_sampler = ElasticDistributedSampler(train_datasets)
-train_dataloader = MyAudioLoader(train_datasets, batch_size=64, drop_last=True,sampler=train_sampler)
+train_dataloader = MyAudioLoader(train_datasets, batch_size=64, drop_last=True,sampler=train_sampler,pin_memory=True)
 criterion = nn.CTCLoss(blank=0, reduction="mean")
 decoder = GreedyDecoder(labels_path)
 # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim,"min",\
